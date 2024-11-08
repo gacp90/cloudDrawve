@@ -63,6 +63,15 @@ const UserSchema = Schema({
         default: 0
     },
 
+    whatpsapp: {
+        type: Boolean,
+        default: false
+    },
+
+    wp: {
+        type: String
+    }
+
 });
 
 UserSchema.method('toJSON', function() {
