@@ -29,6 +29,12 @@ const MetodosSchema = Schema({
 
 });
 
+const MontosSchema = Schema({
+    monto: {
+        type: Number
+    }
+});
+
 const PremiosSchema = Schema({
 
     name: {
@@ -61,6 +67,8 @@ const RifasSchema = Schema({
         type: Number,
         default: 0
     },
+
+    montos: [MontosSchema],
 
     comision: {
         type: Number,
