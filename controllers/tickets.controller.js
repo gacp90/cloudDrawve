@@ -1,5 +1,11 @@
 const { response } = require('express');
 
+const path = require('path');
+const fs = require('fs');
+
+const { v4: uuidv4 } = require('uuid');
+const sharp = require('sharp');
+
 const ObjectId = require('mongoose').Types.ObjectId;
 
 const Ticket = require('../models/ticket.model');
@@ -294,6 +300,122 @@ const updateTicket = async(req, res = response) => {
 
 };
 
+/** =====================================================================
+ *  PAYMENTS ONLINE
+=========================================================================*/
+const paymentsTicketOnline = async(req, res = response) => {
+
+    try {
+
+        const { tickets, ...campos} = req.body;
+        campos.referencia = campos.referencia.trim();
+
+        if (tickets.length === 0) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'No has seleccionado ningun ticket'
+            });
+        }
+
+        const existe = await Ticket.findOne({ 'pagos.referencia': campos.referencia });
+        if (existe) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Ya existe un pago con esta referencia'
+            });
+        }
+
+        // VALIDATE IMAGE
+        if (!req.files || Object.keys(req.files).length === 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No has seleccionado ningún archivo'
+            });
+        }
+
+        // PROCESS IMAGE
+        const file = await sharp(req.files.image.data).metadata();
+
+        // const nameShort = file.format.split('.');
+        const extFile = file.format;
+
+        // VALID EXT
+        const validExt = ['jpg', 'png', 'jpeg', 'webp', 'bmp', 'svg'];
+        if (!validExt.includes(extFile)) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No se permite este tipo de imagen, solo extenciones JPG - PNG - WEBP - SVG'
+            });
+        }
+        // VALID EXT
+
+        // GENERATE NAME UID
+        const nameFile = `${ uuidv4() }.webp`;
+
+        // PATH IMAGE
+        const path = `./uploads/payments/${ nameFile }`;
+
+        // Procesar la imagen con sharp (por ejemplo, redimensionar)
+        await sharp(req.files.image.data)
+            .webp({ equality: 75, effort: 6 })
+            .toFile(path, async(err, info) => {
+
+                let rechazados = [];
+                let confirmados = [];
+                
+                for (let i = 0; i < tickets.length; i++) {
+                    const ticket = tickets[i];
+
+                    const tdb = await Ticket.findById(ticket.tid);
+                    if (tdb.estado !== 'Disponible') {
+                        rechazados.push(ticket);
+                        return;
+                    }
+
+                    let pagos = [];
+                    let referencia = campos.referencia;
+
+                    if (i > 0) {
+                        referencia = `${referencia}-${i+1}`;
+                    }
+
+                    pagos.push({
+                        descripcion: campos.descripcion,
+                        estado: 'Pendiente',
+                        monto: tdb.monto,
+                        equivalencia: (campos.monto / tickets.length),
+                        metodo: campos.metodo,
+                        web: true,
+                        referencia: referencia,
+                        img: nameFile
+                    })
+
+                    tdb.pagos = pagos;
+
+                    await tdb.save();
+
+                    confirmados.push(tdb);
+                    
+                };
+
+                res.json({
+                    ok: true,
+                    confirmados,
+                    rechazados
+                });
+
+            });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error Inesperado'
+        });
+    }
+
+};
+
 // EXPORTS
 module.exports = {
     getTicket,
@@ -301,5 +423,6 @@ module.exports = {
     createTicket,
     updateTicket,
     searchTicket,
-    getTicketPaid
+    getTicketPaid,
+    paymentsTicketOnline
 };

@@ -1,5 +1,36 @@
 const { Schema, model } = require('mongoose');
 
+const ImgSchema = Schema({
+
+    img: {
+        type: String
+    },
+
+    fecha: {
+        type: Date,
+        default: Date.now()
+    }
+
+});
+
+const MetodoSchema = Schema({
+    name: {
+        type: String
+    },
+
+    descripcion: {
+        type: String
+    },
+
+    cuenta: {
+        type: String
+    },
+
+    tasa: {
+        type: Number
+    }
+})
+
 const PagosSchema = Schema({
 
     descripcion: {
@@ -8,11 +39,32 @@ const PagosSchema = Schema({
 
     estado: {
         type: String,
-        default: 'Confirmado'
+        default: 'Pendiente'
     },
 
     monto: {
         type: Number
+    },
+
+    equivalencia: {
+        type: Number
+    },
+
+    metodo: MetodoSchema,
+
+    web: {
+        type: Boolean,
+        defaul: false
+    },
+
+    referencia:{
+        type: String,
+        unique: true,
+        sparse: true 
+    },
+
+    img: {
+        type: String
     },
 
     user: {
@@ -95,6 +147,8 @@ const TicketsSchema = Schema({
         type: Boolean,
         default: false
     },
+
+    img: [ImgSchema],
 
     status: {
         type: Boolean,

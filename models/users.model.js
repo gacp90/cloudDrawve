@@ -17,6 +17,14 @@ const UserSchema = Schema({
         type: String
     },
 
+    tasabs: {
+        type: Number
+    },
+
+    tasacop: {
+        type: Number
+    },
+
     empresa: {
         type: String
     },

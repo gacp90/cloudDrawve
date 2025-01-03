@@ -25,6 +25,10 @@ const MetodosSchema = Schema({
 
     cuenta: {
         type: String
+    },
+
+    tasa: {
+        type: Number
     }
 
 });

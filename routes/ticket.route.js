@@ -5,13 +5,16 @@ const { Router } = require('express');
 const { check } = require('express-validator');
 
 // MIDDLEWARES
+const expressFileUpload = require('express-fileupload');
 const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid } = require('../controllers/tickets.controller');
+const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline } = require('../controllers/tickets.controller');
 
 const router = Router();
+
+router.use(expressFileUpload());
 
 /** =====================================================================
  *  POST TICKETS
@@ -48,6 +51,11 @@ router.post('/', [
  *  PUT TICKET
 =========================================================================*/
 router.put('/:id', validarJWT, updateTicket);
+
+/** =====================================================================
+ *  PUT PAYMENT ONLINE
+=========================================================================*/
+router.post('/payments/online', paymentsTicketOnline)
 
 // EXPORT
 module.exports = router;
