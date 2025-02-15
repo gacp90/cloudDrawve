@@ -50,6 +50,26 @@ const updateImage = async(tipo, id, nameFile, desc) => {
             // BREAK PRODUCT
             break;
 
+        case 'portada':
+
+            const rifaDB = await Rifa.findById(id);
+            if (!rifaDB) {
+                return false;
+            }
+
+            // VALIDATE IMAGE
+            pathOld = `./uploads/portada/${ rifaDB.portada }`;
+            deleteImage(pathOld);
+
+            rifaDB.portada = nameFile;
+            await rifaDB.save();
+            return true;
+
+
+
+            // BREAK PRODUCT
+            break;
+
         case 'user':
 
             // SEARCH USER BY ID

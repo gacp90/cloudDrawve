@@ -24,7 +24,7 @@ const fileUpload = async(req, res = response) => {
     const id = req.params.id;
     const desc = req.query.desc || 'img';
 
-    const validType = ['rifa', 'user'];
+    const validType = ['rifa', 'user', 'portada'];
 
     // VALID TYPES
     if (!validType.includes(tipo)) {
@@ -69,6 +69,24 @@ const fileUpload = async(req, res = response) => {
 
         sharp(req.files.image.data)
             .resize(600, 400)
+            .webp({ equality: 75, effort: 6 })
+            .toFile(path, (err, info) => {
+
+                // UPDATE IMAGE
+                updateImage(tipo, id, nameFile, desc);
+
+                res.json({
+                    ok: true,
+                    msg: 'Imagen Actualizada',
+                    nombreArchivo: nameFile,
+                    date: Date.now()
+                });
+
+            });
+
+    } else if(tipo === 'portada'){
+
+        sharp(req.files.image.data)
             .webp({ equality: 75, effort: 6 })
             .toFile(path, (err, info) => {
 

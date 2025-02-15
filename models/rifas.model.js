@@ -105,6 +105,8 @@ const RifasSchema = Schema({
 
     img: [ImgSchema],
 
+    portada: ImgSchema,
+
     estado: {
         type: String,
         default: 'Pendiente'
