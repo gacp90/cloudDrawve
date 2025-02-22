@@ -45,8 +45,6 @@ const updateImage = async(tipo, id, nameFile, desc) => {
             await rifa.save();
             return true;
 
-
-
             // BREAK PRODUCT
             break;
 
@@ -61,7 +59,9 @@ const updateImage = async(tipo, id, nameFile, desc) => {
             pathOld = `./uploads/portada/${ rifaDB.portada }`;
             deleteImage(pathOld);
 
-            rifaDB.portada = nameFile;
+            rifaDB.portada = {
+                img:nameFile
+            };
             await rifaDB.save();
             return true;
 
