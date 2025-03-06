@@ -255,6 +255,76 @@ const createTicket = async(req, res = response) => {
     }
 };
 
+/** =====================================================================
+ *  POST TICKET GANADRO
+=========================================================================*/
+const ticketGanador = async(req, res = response) => {
+
+    try {
+
+        const uid = req.uid;
+        const { tid, rifid } = req.body;
+        
+        // VERIFICAR SI ES UN ADMIN
+        const user = await User.findById(uid);
+        if (user.role !== 'ADMIN') {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No tienes los privilegios necesarios para realizar esta consulta'
+            });
+
+        }
+
+        // VERIFICAR SI ES UN ADMIN
+        const rifa = await Rifa.findById(rifid);
+        if (uid !== (String)(new ObjectId(rifa.admin))) {
+            return res.status(401).json({
+                ok: false,
+                msg: 'No tienes los privilegios para realizar cambios'
+            });
+        }
+        
+        // VERIFICAR SI NO EXISTE YA EL TICKET GANADOR
+        const validateGanador = await Ticket.find({rifa: rifid, ganador: true});
+        if (validateGanador.length > 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: `Ya existe un ticket seleccionado como Ganador, #${validateGanador[0].numero}`
+            });
+
+        }
+
+        // BUSCAR TICKET
+        const ticketDB = await Ticket.findById(tid)
+            .populate('ruta')
+            .populate('vendedor');
+        if (!ticketDB) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No hemos encontrado este ticket, porfavor intente nuevamente.'
+            });
+        }
+
+        ticketDB.ganador = true;
+
+        // UPDATE GANADOR
+        await Ticket.findByIdAndUpdate(tid, {ganador: true}, { new: true, useFindAndModify: false });
+
+        res.json({
+            ok: true,
+            ticket: ticketDB
+        });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error Inesperado'
+        });
+    }
+
+}
+
 
 /** =====================================================================
  *  UPDATE TICKET
@@ -277,6 +347,12 @@ const updateTicket = async(req, res = response) => {
 
         // VALIDATE TICKET
         let {...campos } = req.body;
+
+        if (!ticketDB.disponible) {
+            if (campos.vendedor) {
+                delete campos.vendedor
+            }
+        }
 
         // UPDATE
         await Ticket.findByIdAndUpdate(tid, campos, { new: true, useFindAndModify: false });
@@ -301,14 +377,76 @@ const updateTicket = async(req, res = response) => {
 };
 
 /** =====================================================================
+ *  TICKET RESTORE
+=========================================================================*/
+const restoreTicket = async(req, res = response ) => {
+
+    try {
+        const ticketId = req.params.id;
+        const uid = req.uid;
+
+        // Busca el ticket por su ID
+        const ticket = await Ticket.findById(ticketId)
+            .populate('rifa');
+
+        if (!ticket) {
+            return res.status(404).json({ ok: false, msg: 'Ticket no encontrado' });
+        }
+
+        const userDB = await User.findById(uid);
+        if (userDB.role === 'STAFF') {
+            return res.status(400).json({ ok: false, msg: 'No tienes los privilegios necesario para resetear este ticket' });
+        }
+
+        // Restaura el ticket a su estado inicial
+        ticket.monto = ticket.rifa.monto;
+        ticket.estado = 'Disponible';
+        ticket.disponible = true;
+        ticket.ganador = false;
+        ticket.status = true;
+        ticket.pagos = [];
+
+        // Elimina o resetea los campos adicionales
+        ticket.cedula = undefined;
+        ticket.codigo = undefined;
+        ticket.direccion = undefined;
+        ticket.nombre = undefined;
+        ticket.nota = undefined;
+        ticket.ruta = undefined;
+        ticket.telefono = undefined;
+        ticket.vendedor = undefined;
+
+        // Guarda los cambios en la base de datos
+        await ticket.save();
+
+        res.status(200).json({ 
+            ok: true, 
+            ticket 
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error Inesperado'
+        });
+    }
+
+};
+
+/** =====================================================================
  *  PAYMENTS ONLINE
 =========================================================================*/
 const paymentsTicketOnline = async(req, res = response) => {
 
     try {
 
-        const { tickets, ...campos} = req.body;
+        
+        let datos = JSON.parse(req.body.datos);        
+                
+        const { tickets, ...campos} = datos;
         campos.referencia = campos.referencia.trim();
+        
 
         if (tickets.length === 0) {
             return res.status(404).json({
@@ -376,7 +514,7 @@ const paymentsTicketOnline = async(req, res = response) => {
                     let referencia = campos.referencia;
 
                     if (i > 0) {
-                        referencia = `${referencia}-${i+1}`;
+                        referencia = `${referencia} - ${i+1}/${tickets.length}`;
                     }
 
                     pagos.push({
@@ -391,6 +529,15 @@ const paymentsTicketOnline = async(req, res = response) => {
                     })
 
                     tdb.pagos = pagos;
+                    tdb.nombre = campos.nombre;
+                    tdb.codigo = campos.codigo;
+                    tdb.telefono = campos.codigo+campos.telefono;
+                    tdb.cedula = campos.cedula;
+                    tdb.direccion = campos.direccion;
+                    tdb.ruta = campos.ruta;
+                    tdb.vendedor = campos.vendedor;
+                    tdb.estado = 'Apartado';
+                    tdb.disponible = false;                 
 
                     await tdb.save();
 
@@ -424,5 +571,7 @@ module.exports = {
     updateTicket,
     searchTicket,
     getTicketPaid,
-    paymentsTicketOnline
+    paymentsTicketOnline,
+    restoreTicket,
+    ticketGanador
 };

@@ -95,6 +95,10 @@ const createRifa = async(req, res = response) => {
         const rifa = new Rifa(req.body);
         rifa.admin = uid;
 
+        if (process.env.ACTIVA === 'Activa') {
+            rifa.estado = 'Activa';
+        }
+
         await rifa.save();
 
         await createTickets(rifa.monto, rifa._id, rifa.numeros);

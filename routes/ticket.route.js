@@ -10,7 +10,7 @@ const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline } = require('../controllers/tickets.controller');
+const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador } = require('../controllers/tickets.controller');
 
 const router = Router();
 
@@ -48,9 +48,26 @@ router.post('/', [
 );
 
 /** =====================================================================
+ *  POST TICKET GANADOR
+=========================================================================*/
+router.post('/ganador', [
+        validarJWT,
+        check('tid', 'El ticket es obligatorio').not().isEmpty(),
+        check('rifid', 'Falta Información de la rifa').not().isEmpty(),
+        validarCampos
+    ],
+    ticketGanador
+);
+
+/** =====================================================================
  *  PUT TICKET
 =========================================================================*/
 router.put('/:id', validarJWT, updateTicket);
+
+/** =====================================================================
+ *  RESTORE TICKET
+=========================================================================*/
+router.delete('/restore/:id', validarJWT, restoreTicket);
 
 /** =====================================================================
  *  PUT PAYMENT ONLINE

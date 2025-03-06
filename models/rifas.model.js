@@ -36,6 +36,9 @@ const MetodosSchema = Schema({
 const MontosSchema = Schema({
     monto: {
         type: Number
+    },
+    mayor: {
+        type: Number        
     }
 });
 
