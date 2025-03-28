@@ -5,43 +5,29 @@ const Ticket = require('../models/ticket.model');
 =========================================================================*/
 const createTickets = async(monto, rifa, numeros) => {
 
+    // Determina la longitud de los dígitos según el número total de tickets
+    const numLength = numeros.toString().length - 1;
+    
+    // Array para almacenar los tickets
+    const ticketsArray = [];
+
     for (let i = 0; i < numeros; i++) {
+        // Genera el número con ceros a la izquierda según su longitud
+        const numeroFormateado = i.toString().padStart(numLength, '0');
 
-        if (i < 10) {
-
-            const ticket = {
-                numero: `00${i}`,
-                monto,
-                rifa
-            }
-
-            const ticketSave = new Ticket(ticket);
-            await ticketSave.save();
-
-        } else if (i < 100) {
-            const ticket = {
-                numero: `0${i}`,
-                monto,
-                rifa
-            }
-
-            const ticketSave = new Ticket(ticket);
-            await ticketSave.save();
-        } else {
-            const ticket = {
-                numero: `${i}`,
-                monto,
-                rifa
-            }
-
-            const ticketSave = new Ticket(ticket);
-            await ticketSave.save();
-        }
-
+        // Crea el ticket y agrégalo al array
+        ticketsArray.push({
+            numero: numeroFormateado,
+            monto,
+            rifa
+        });
     }
 
-    return true;
+    // Inserta todos los tickets en una sola operación
+    await Ticket.insertMany(ticketsArray);
 
+    return true;
+    
 };
 
 
