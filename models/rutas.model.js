@@ -12,6 +12,11 @@ const RutasSchema = Schema({
         ref: 'User'
     },
 
+    color: {
+        type: String,
+        default: '#2d2d2d'
+    },
+
     status: {
         type: Boolean,
         default: true
