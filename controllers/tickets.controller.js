@@ -377,6 +377,65 @@ const updateTicket = async(req, res = response) => {
 };
 
 /** =====================================================================
+ *  UPDATE VENDEDOR TICKET
+=========================================================================*/
+const updateVendedor = async(req, res = response) => {
+
+    try {
+
+        const tid = req.params.id;
+        const uid = req.uid;
+
+        const user = await User.findById(uid);
+        if (user.role !== 'ADMIN') {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Lo siento, no tienes los privilegios necesarios para realizar este cambio.'
+            });
+        }
+
+        // SEARCH TICKET
+        const ticketDB = await Ticket.findById(tid);
+        if (!ticketDB) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'No existe ningun ticket con este ID'
+            });
+        }
+
+        // VALIDATE TICKET
+        let {...campos } = req.body;
+
+        if (ticketDB.disponible) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'El ticket esta disponible, no se puede asignar ningun vendedor'
+            });
+        }
+
+        // UPDATE
+        await Ticket.findByIdAndUpdate(tid, campos, { new: true, useFindAndModify: false });
+
+        const ticketUpdate = await Ticket.findById(tid)
+            .populate('ruta')
+            .populate('vendedor');
+
+        res.json({
+            ok: true,
+            ticket: ticketUpdate
+        });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error Inesperado'
+        });
+    }
+
+}
+
+/** =====================================================================
  *  TICKET RESTORE
 =========================================================================*/
 const restoreTicket = async(req, res = response ) => {
@@ -573,5 +632,6 @@ module.exports = {
     getTicketPaid,
     paymentsTicketOnline,
     restoreTicket,
-    ticketGanador
+    ticketGanador,
+    updateVendedor
 };
