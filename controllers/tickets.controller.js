@@ -11,6 +11,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const Ticket = require('../models/ticket.model');
 const User = require('../models/users.model');
 const Rifa = require('../models/rifas.model');
+const Ruta = require('../models/rutas.model');
 
 /** =====================================================================
  *  SEARCH TICKET FOR CLIENT
@@ -313,6 +314,165 @@ const ticketGanador = async(req, res = response) => {
         res.json({
             ok: true,
             ticket: ticketDB
+        });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error Inesperado'
+        });
+    }
+
+}
+
+/** =====================================================================
+ *  SAVE TICKETS MASIVES
+=========================================================================*/
+const saveTicketsMasives = async(req, res = response) => {
+
+    try {
+
+        // DATA
+        const uid = req.uid;
+        const { tickets, rifid } = req.body;
+
+        // VERIFICAR SI ES UN ADMIN
+        const user = await User.findById(uid);
+        if (user.role !== 'ADMIN') {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No tienes los privilegios necesarios para realizar esta acción'
+            });
+        }        
+
+        if (tickets.length === 0) {
+           return res.status(400).json({
+                ok: false,
+                msg: 'La lista de tickets esta vacia, porfavor agregar los tickets'
+            }); 
+        }
+
+        // VALIDAR RIFA
+        const rifa = await Rifa.findById(rifid);
+        if (!rifa) {
+            return res.status(401).json({
+                ok: false,
+                msg: 'Esta rifa no existe'
+            });
+        }
+        const totalDigitos = String(rifa.numeros - 1).length;
+
+        // COMPROBAR SI LA RIFA ESTA ACTIVA
+        if (rifa.estado !== 'Activa') {
+            return res.status(401).json({
+                ok: false,
+                msg: 'Esta rifa no esta activa!'
+            });
+        }
+
+        // COMPROBAR SI ES EL MISMO ADMINISTRADOR
+        if (uid !== (String)(new ObjectId(rifa.admin)) ) {
+            return res.status(401).json({
+                ok: false,
+                msg: 'No tienes los privilegios para realizar cambios'
+            });
+        }
+
+        // Cargar todas las rutas activas
+        const rutas = await Ruta.find({ admin: uid, status: true });
+        if (!rutas.length) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Debes agregar al menos una ruta activa'
+        });
+        }
+
+        function normalizarTexto(texto) {
+
+            texto = new String(texto)
+
+            return texto
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, ' ')
+                .trim();
+        }        
+
+        // Normalizar rutas
+        const rutasMap = new Map();
+            rutas.forEach(r => {
+            rutasMap.set(normalizarTexto(r.name), r._id);
+        });        
+
+        const rutaDefaultId = rutas[0]._id;
+
+        // Normalizar estado
+        const normalizarEstado = (estado) => {
+            const normal = (estado || '').toLowerCase().trim();
+            if (normal === 'pagado') return 'Pagado';
+            if (normal === 'apartado') return 'Apartado';
+            return 'Apartado'; // por defecto
+        };
+
+        // Buscar todos los tickets disponibles para esta rifa
+        const ticketsDB = await Ticket.find({
+            rifa: rifid,
+            disponible: true,
+            estado: 'Disponible'
+        }, { numero: 1 });
+
+        
+        
+        const ticketMap = new Map();
+        ticketsDB.forEach(t => ticketMap.set(t.numero, t._id));
+
+        let actualizados = 0;
+        let noEncontrados = [];
+        let rutasIncorrectas = [];
+
+
+        for (const ticket of tickets) {
+            
+            const numeroFormateado = String(ticket.numero).padStart(totalDigitos, '0');
+            const tid = ticketMap.get(numeroFormateado);
+
+            if (!tid) {
+                noEncontrados.push(ticket.numero);
+                continue;
+            }
+            
+            const nombreRuta = normalizarTexto(ticket.ruta);
+            const rutaId = rutasMap.get(nombreRuta) || rutaDefaultId;
+
+            if (!rutasMap.has(nombreRuta)) {
+                rutasIncorrectas.push(ticket.ruta || '');
+            }
+
+            const estado = normalizarEstado(ticket.estado);
+
+            await Ticket.findByIdAndUpdate(tid, {
+                ruta: rutaId,
+                cedula: ticket.cedula,
+                telefono: ticket.telefono,
+                direccion: ticket.direccion,
+                estado,
+                nombre: ticket.nombre,
+                monto: ticket.monto,
+                disponible: false,
+                vendedor: uid,
+            }, { new: true });
+
+            actualizados++;
+
+        }
+
+        res.json({
+            ok: true,
+            msg: `Tickets actualizados: ${actualizados}`,
+            ticketsNoEncontrados: noEncontrados,
+            rutasSinCoincidencia: rutasIncorrectas
         });
         
     } catch (error) {
@@ -633,5 +793,6 @@ module.exports = {
     paymentsTicketOnline,
     restoreTicket,
     ticketGanador,
-    updateVendedor
+    updateVendedor,
+    saveTicketsMasives
 };

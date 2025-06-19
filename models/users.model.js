@@ -71,7 +71,7 @@ const UserSchema = Schema({
         default: 0
     },
 
-    whatpsapp: {
+    whatsapp: {
         type: Boolean,
         default: false
     },

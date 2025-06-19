@@ -10,7 +10,7 @@ const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor } = require('../controllers/tickets.controller');
+const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor, saveTicketsMasives } = require('../controllers/tickets.controller');
 
 const router = Router();
 
@@ -58,6 +58,11 @@ router.post('/ganador', [
     ],
     ticketGanador
 );
+
+/** =====================================================================
+ *  POST MASIVES TICKETS
+=========================================================================*/
+router.post('/send/masive', validarJWT, saveTicketsMasives);
 
 /** =====================================================================
  *  PUT TICKET
