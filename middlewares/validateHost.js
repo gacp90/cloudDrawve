@@ -3,6 +3,7 @@ module.exports = function (req, res, next) {
     'https://rifasaurinegro.com',
     'https://www.rifasaurinegro.com',
     'https://admin.rifasaurinegro.com',
+    'https://www.admin.rifasaurinegro.com',
     'http://localhost:4200', // durante desarrollo
     'http://localhost:3000'
   ];
