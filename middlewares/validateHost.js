@@ -1,17 +1,21 @@
-// middleware/validateHost.js
 module.exports = function (req, res, next) {
-  const allowedHosts = [
-    'rifasaurinegro.com',
-    'www.rifasaurinegro.com',
-    'admin.rifasaurinegro.com',
-    'www.admin.rifasaurinegro.com',
-    'localhost'
+  const allowedOrigins = [
+    'https://rifasaurinegro.com',
+    'https://www.rifasaurinegro.com',
+    'https://admin.rifasaurinegro.com',
+    'http://localhost:4200', // durante desarrollo
+    'http://localhost:3000'
   ];
 
-  const hostHeader = req.headers.host.split(':')[0]; // elimina puerto si lo trae
+  const origin = req.get('Origin') || '';
+  const referer = req.get('Referer') || '';
 
-  if (!allowedHosts.includes(hostHeader)) {
-    return res.status(403).send('Dominio no autorizado');
+  const isAllowed =
+    allowedOrigins.some(domain => origin.startsWith(domain)) ||
+    allowedOrigins.some(domain => referer.startsWith(domain));
+
+  if (!isAllowed && (origin || referer)) {
+    return res.status(403).send('Acceso denegado por origen no autorizado');
   }
 
   next();
