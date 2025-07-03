@@ -6,11 +6,16 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+const validateHost = require('./middleware/validateHost');
+
 //Conection DB
 const { dbConection } = require('./database/config');
 
 // Crear el servidor express
 const app = express();
+
+// VALIDAR HOSTS
+app.use(validateHost);
 
 // CORS
 app.use(cors());
