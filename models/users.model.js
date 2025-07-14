@@ -75,9 +75,24 @@ const UserSchema = Schema({
         type: Boolean,
         default: false
     },
-
+    
     wp: {
         type: String
+    },
+
+    wati: {
+        type: Boolean,
+        default: false
+    },
+
+    watilink: {
+        type: String,
+        default: 'empty'
+    },
+
+    watitoken: {
+        type: String,
+        default: 'empty'
     }
 
 });
