@@ -15,7 +15,7 @@ const { dbConection } = require('./database/config');
 const app = express();
 
 // VALIDAR HOSTS
-app.use(validateHost);
+// app.use(validateHost);
 
 // CORS
 app.use(cors());
