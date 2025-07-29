@@ -124,7 +124,7 @@ const rePass = async(req, res = response) => {
         const html = `<div style="box-sizing:border-box;margin:0;font-family: Montserrat,-apple-system,BlinkMacSystemFont;font-size:1rem;font-weight:400;line-height:1.5;text-align:left;background-color:#fff;color:#333">
                 <div class="adM">
                     <center>
-                        <img src="https://rifari.com/assets/img/logo/rifari.webp" style="max-width: 250px;">
+                        <img src="https://cloud.rifari.com/assets/images/rifari.png" style="max-width: 250px;" alt="rifari">
                     </center>
                 </div>
                 <div style="box-sizing:border-box;width:100%;padding-right:15px;padding-left:15px;margin-right:auto;margin-left:auto;max-width:620px">
