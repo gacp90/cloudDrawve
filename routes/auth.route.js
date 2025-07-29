@@ -9,7 +9,7 @@ const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { login, renewJWT } = require('../controllers/auth.controller');
+const { login, renewJWT, rePass } = require('../controllers/auth.controller');
 
 const router = Router();
 
@@ -23,17 +23,21 @@ router.post('/', [
     ],
     login
 );
-/** =====================================================================
- *  LOGIN
-=========================================================================*/
 
 /** =====================================================================
  *  RENEW TOKEN
 =========================================================================*/
 router.get('/renew', validarJWT, renewJWT);
+
 /** =====================================================================
-*  RENEW TOKEN
+ *  RECUPERAR CONTRASEÑA
 =========================================================================*/
+router.post('/recuperar/password', [
+        check('email', 'El email es obligatorio').not().isEmpty(),
+        validarCampos
+    ],
+    rePass
+);
 
 
 // EXPORT
