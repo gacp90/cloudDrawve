@@ -40,6 +40,22 @@ const MontosSchema = Schema({
     mayor: {
         type: Number        
     }
+    
+});
+
+const ConfigWebSchema = Schema({
+    min: {
+        type: Number,
+        default: 1
+    },
+    max: {
+        type: Number,
+        default: 50     
+    },
+    porcentaje:{
+        type: Boolean,
+        default: false
+    }
 });
 
 const PremiosSchema = Schema({
@@ -121,6 +137,11 @@ const RifasSchema = Schema({
     },
 
     abierta: {
+        type: Boolean,
+        default: true
+    },
+    configweb: ConfigWebSchema,
+    visible: {
         type: Boolean,
         default: true
     },
