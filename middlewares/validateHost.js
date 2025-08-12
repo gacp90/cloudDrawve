@@ -1,14 +1,14 @@
 module.exports = function (req, res, next) {
   const allowedOrigins = [
-    'https://rifalaplaya.com',
-    'https://www.rifalaplaya.com',
-    'https://admin.rifalaplaya.com',
-    'https://www.admin.rifalaplaya.com',
-    // 'https://ganaconbeltran.com',
-    // 'https://www.ganaconbeltran.com',
-    // 'https://admin.ganaconbeltran.com',
-    // 'https://www.admin.ganaconbeltran.com',
-    'http://localhost:4200', // durante desarrollo
+    'https://rifasaurinegro.com',
+    'https://www.rifasaurinegro.com',
+    'https://admin.rifasaurinegro.com',
+    'https://www.admin.rifasaurinegro.com',
+    'https://ganaconbeltran.com',
+    'https://www.ganaconbeltran.com',
+    'https://admin.ganaconbeltran.com',
+    'https://www.admin.ganaconbeltran.com',
+    'http://localhost:4200',
     'http://localhost:3000'
   ];
 

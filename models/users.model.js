@@ -93,6 +93,9 @@ const UserSchema = Schema({
     watitoken: {
         type: String,
         default: 'empty'
+    },
+    msg: {
+        type: String
     }
 
 });
