@@ -1,9 +1,9 @@
 module.exports = function (req, res, next) {
   const allowedOrigins = [
-    'https://rifaselmocho.com',
-    'https://www.rifaselmocho.com',
-    'https://admin.rifaselmocho.com',
-    'https://www.admin.rifaselmocho.com',
+    'https://rifacarssocopo.com',
+    'https://www.rifacarssocopo.com',
+    'https://admin.rifacarssocopo.com',
+    'https://www.admin.rifacarssocopo.com',
     // 'https://ganaconbeltran.com',
     // 'https://www.ganaconbeltran.com',
     // 'https://admin.ganaconbeltran.com',
