@@ -6,7 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
-const validateHost = require('./middlewares/validateHost');
+// const validateHost = require('./middlewares/validateHost');
 
 //Conection DB
 const { dbConection } = require('./database/config');
@@ -15,7 +15,7 @@ const { dbConection } = require('./database/config');
 const app = express();
 
 // VALIDAR HOSTS
-app.use(validateHost);
+// app.use(validateHost);
 
 // CORS
 app.use(cors());
