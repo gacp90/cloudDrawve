@@ -20,6 +20,7 @@
         "mongoose": "^8.1.0",
         "nodemailer": "^7.0.5",
         "nodemailer-smtp-transport": "^2.7.4",
+        "pdfkit": "^0.17.1",
         "sharp": "^0.30.4",
         "short-uuid": "^4.2.2"
     }

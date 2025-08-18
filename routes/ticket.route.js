@@ -10,7 +10,7 @@ const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor, saveTicketsMasives } = require('../controllers/tickets.controller');
+const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor, saveTicketsMasives, exportTicketsPDF } = require('../controllers/tickets.controller');
 
 const router = Router();
 
@@ -30,6 +30,11 @@ router.get('/:id', validarJWT, getTicketId);
  *  GET TICKET INGRESOS
 =========================================================================*/
 router.get('/ingresos/:rifa', validarJWT, getTicketPaid);
+
+/** =====================================================================
+ *  POST EXPORT TICKETS AVAILABLE
+=========================================================================*/
+router.get('/pdf/:rifaId', exportTicketsPDF);
 
 /** =====================================================================
  *  GET SEARCH TICKET

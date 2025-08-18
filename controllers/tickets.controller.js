@@ -3,6 +3,8 @@ const { response } = require('express');
 const path = require('path');
 const fs = require('fs');
 
+const PDFDocument = require('pdfkit');
+
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 
@@ -782,6 +784,89 @@ const paymentsTicketOnline = async(req, res = response) => {
 
 };
 
+/** =====================================================================
+ *  PAYMENTS ONLINE
+=========================================================================*/
+const exportTicketsPDF = async (req, res) => {
+  try {
+    const { rifaId } = req.params;
+
+    // 📌 Buscar rifa
+    const rifa = await Rifa.findById(rifaId);
+    if (!rifa) {
+      return res.status(404).json({ msg: 'Rifa no encontrada' });
+    }
+
+    // 📌 Buscar tickets disponibles
+    const tickets = await Ticket.find({ estado: 'Disponible', rifa: rifaId }).sort({ numero: 1 });
+
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ msg: 'No hay tickets disponibles' });
+    }
+
+    // 📌 Crear PDF
+    res.setHeader('Content-disposition', `attachment; filename="tickets-${rifa.name}.pdf"`);
+    res.setHeader('Content-type', 'application/pdf');
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    doc.pipe(res);
+
+    // ✅ Función para encabezado (lo reutilizamos al cambiar página)
+    const drawHeader = () => {
+      doc.fontSize(18).text(rifa.name, { align: 'center' });
+      doc.fontSize(14).text('Tickets disponibles:', { underline: true });
+      doc.moveDown(1);
+    };
+
+    drawHeader();
+
+    // ✅ Configuración de la cuadrícula
+    const colWidth = 40;   // ancho de cada ticket
+    const rowHeight = 25;  // alto del rectángulo
+    const cols = 12;       // cantidad de tickets por fila
+    const space = 5;       // espacio entre tickets
+    let x = doc.page.margins.left;
+    let y = doc.y;
+
+    tickets.forEach((ticket, index) => {
+      // 🔎 Verificar si hay espacio en la página
+      if (y + rowHeight + doc.page.margins.bottom > doc.page.height) {
+        doc.addPage();
+        drawHeader();
+        x = doc.page.margins.left;
+        y = doc.y;
+      }
+
+      // Dibujar rectángulo verde
+      doc.rect(x, y, colWidth, rowHeight)
+        .fillAndStroke('#4CAF50');
+
+      // Escribir número en blanco y centrado
+      doc.fillColor('white')
+         .fontSize(12)
+         .text(ticket.numero, x, y + 7, { width: colWidth, align: 'center' });
+
+      // Restaurar color negro
+      doc.fillColor('black');
+
+      // Avanzar a la siguiente columna
+      x += colWidth + space;
+
+      // Saltar de fila al completar columnas
+      if ((index + 1) % cols === 0) {
+        x = doc.page.margins.left;
+        y += rowHeight + space;
+      }
+    });
+
+    doc.end();
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Error al generar el PDF', error: err.message });
+  }
+};
+
 // EXPORTS
 module.exports = {
     getTicket,
@@ -794,5 +879,6 @@ module.exports = {
     restoreTicket,
     ticketGanador,
     updateVendedor,
-    saveTicketsMasives
+    saveTicketsMasives,
+    exportTicketsPDF
 };
