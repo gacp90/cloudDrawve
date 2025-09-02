@@ -94,6 +94,12 @@ const UserSchema = Schema({
         type: String,
         default: 'empty'
     },
+
+    termica: {
+        type: Boolean,
+        default: false
+    },
+    
     msg: {
         type: String
     }
