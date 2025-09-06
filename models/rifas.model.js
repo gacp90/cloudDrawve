@@ -37,8 +37,35 @@ const MontosSchema = Schema({
     monto: {
         type: Number
     },
-    mayor: {
-        type: Number        
+    
+    qty: {
+        type: Number,
+        default: 0
+    }    
+});
+
+const BtnsSchema = Schema({
+    name: {
+        type: String
+    },
+
+    monto: {
+        type: Number
+    },
+    
+    qty: {
+        type: Number,
+        default: 0
+    },
+
+    color: {
+        type: String,
+        default: '#000'
+    },
+
+    fondo: {
+        type: String,
+        default: '#fff'
     }
     
 });
@@ -130,6 +157,13 @@ const RifasSchema = Schema({
         type: Boolean,
         default: false
     },
+
+    lista: {
+        type: Boolean,
+        default: true
+    },
+
+    botones: [BtnsSchema],
 
     min: {
         type: Number,
