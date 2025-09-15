@@ -29,6 +29,10 @@ const MetodosSchema = Schema({
 
     tasa: {
         type: Number
+    },
+    min: {
+        type: Number,
+        default: 0
     }
 
 });
