@@ -33,6 +33,7 @@ dbConection();
 app.use(express.static('public'));
 
 // RUTAS
+app.use('/api/clients', require('./routes/clientes.route'));
 app.use('/api/login', require('./routes/auth.route'));
 app.use('/api/rifas', require('./routes/rifa.route'));
 app.use('/api/rutas', require('./routes/ruta.route'));

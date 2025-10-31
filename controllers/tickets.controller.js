@@ -619,6 +619,14 @@ const restoreTicket = async(req, res = response ) => {
             return res.status(400).json({ ok: false, msg: 'No tienes los privilegios necesario para resetear este ticket' });
         }
 
+        // VERIFICAR SI ES UN ADMIN
+        if (uid !== (String)(new ObjectId(ticket.rifa.admin))) {
+            return res.status(401).json({
+                ok: false,
+                msg: 'No tienes los privilegios para realizar cambios'
+            });
+        }
+
         // Restaura el ticket a su estado inicial
         ticket.monto = ticket.rifa.monto;
         ticket.estado = 'Disponible';
@@ -636,6 +644,7 @@ const restoreTicket = async(req, res = response ) => {
         ticket.ruta = undefined;
         ticket.telefono = undefined;
         ticket.vendedor = undefined;
+        ticket.cliente = undefined;
 
         // Guarda los cambios en la base de datos
         await ticket.save();

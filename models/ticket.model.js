@@ -111,6 +111,10 @@ const TicketsSchema = Schema({
         type: String
     },
 
+    correo: {
+        type: String
+    },
+
     ruta: {
         type: Schema.Types.ObjectId,
         ref: 'Rutas'
@@ -132,6 +136,11 @@ const TicketsSchema = Schema({
         ref: 'User'
     },
 
+    cliente: {
+        type: Schema.Types.ObjectId,
+        ref: 'Clientes'
+    },
+
     pagos: [PagosSchema],
 
     nota: {
@@ -144,6 +153,11 @@ const TicketsSchema = Schema({
     },
 
     ganador: {
+        type: Boolean,
+        default: false
+    },
+
+    sms: {
         type: Boolean,
         default: false
     },
