@@ -363,6 +363,7 @@ const saveTicketsMasives = async(req, res = response) => {
                 msg: 'Esta rifa no existe'
             });
         }
+
         const totalDigitos = String(rifa.numeros - 1).length;
 
         // COMPROBAR SI LA RIFA ESTA ACTIVA

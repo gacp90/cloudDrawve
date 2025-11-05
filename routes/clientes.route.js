@@ -8,7 +8,7 @@ const { check } = require('express-validator');
 const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
-const { getClients, getClienteId, createCliente, updateCliente, deleteCliente } = require('../controllers/clientes.controller');
+const { getClients, getClienteId, createCliente, updateCliente, deleteCliente, createClientsMasives } = require('../controllers/clientes.controller');
 
 const router = Router();
 
@@ -34,6 +34,12 @@ router.post('/', [
     ],
     createCliente
 );
+
+/** =====================================================================
+ *  POST MASIVES CLIENTS
+=========================================================================*/
+router.post('/save/masive', validarJWT, createClientsMasives);
+
 
 /** =====================================================================
  *  PUT CLIENT

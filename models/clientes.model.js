@@ -70,7 +70,9 @@ const ClientesSchema = Schema({
         default: false
     },
     
-    alerts: String,
+    alerts: {
+        type: String
+    },
 
     fecha: {
         type: Date,

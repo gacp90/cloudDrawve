@@ -5,6 +5,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const Cliente = require('../models/clientes.model');
 const User = require('../models/users.model');
 const Ticket = require('../models/ticket.model');
+const Ruta = require('../models/rutas.model');
 
 /** ======================================================================
  *  GET
@@ -141,6 +142,113 @@ const createCliente = async(req, res = response) => {
             msg: 'Error inesperado al crear el cliente'
         });
     }
+};
+
+/** =====================================================================
+ *  SAVE CLIENTS MASIVES
+=========================================================================*/
+const createClientsMasives = async(req, res = response) => {
+
+    try {
+
+        const uid = req.uid;
+        let admin = req.uid;
+        const { clients } = req.body;
+
+        // ASIGNAR ADMIN
+        const user = await User.findById(uid);
+        if (user.role !== 'ADMIN') {
+            admin = user.admin;
+        }
+
+        // Cargar todas las rutas activas
+        const rutas = await Ruta.find({ admin: uid, status: true });
+        if (!rutas.length) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Debes agregar al menos una ruta activa'
+            });
+        }
+
+        function normalizarTexto(texto) {
+
+            texto = new String(texto)
+
+            return texto
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, ' ')
+                .trim();
+        }        
+
+        // Normalizar rutas
+        const rutasMap = new Map();
+            rutas.forEach(r => {
+            rutasMap.set(normalizarTexto(r.name), r._id);
+        });        
+
+        const rutaDefaultId = rutas[0]._id;
+        let noCreados = 0;
+        let rutasIncorrectas = [];
+        const clientsArray = [];
+
+        for (const client of clients) {            
+
+            if ( !client.nombre || !client.codigo || !client.telefono || !client.cedula || !client.direccion || !client.ruta ) {
+                noCreados++;
+                continue;
+            }
+
+            const clientDB = await Cliente.findOne({cedula: client.cedula, admin});
+            if (clientDB) {
+                noCreados++;
+                continue;
+            }
+
+            if (client.correo) {
+                client.correo = client.correo.toLowerCase().trim();
+            }
+            
+            const nombreRuta = normalizarTexto(client.ruta);
+            const rutaId = rutasMap.get(nombreRuta) || rutaDefaultId;
+
+            if (!rutasMap.has(nombreRuta)) {
+                rutasIncorrectas.push(nombreRuta.ruta || '');
+            }
+
+             // Crea el ticket y agrégalo al array
+            clientsArray.push({
+                nombre: client.nombre,
+                codigo: client.codigo,
+                telefono: client.telefono,
+                cedula: client.cedula,
+                direccion: client.direccion,
+                correo: client.correo,
+                admin: admin,
+                ruta: rutaId,
+            });
+
+        }
+
+        // Inserta todos los clientes en una sola operación
+        await Cliente.insertMany(clientsArray);
+        
+        res.json({
+            ok: true,
+            msg: `Clientes creados: ${clientsArray.length}`,
+            noCreados,
+            rutasSinCoincidencia: rutasIncorrectas
+        });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error inesperado al crear el cliente'
+        });
+    }
+
 };
 
 /** =====================================================================
@@ -281,5 +389,6 @@ module.exports = {
     createCliente,
     updateCliente,
     deleteCliente,
-    getClienteId
+    getClienteId,
+    createClientsMasives
 };
