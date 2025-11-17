@@ -84,10 +84,17 @@ const createSms = async(req, res = response) => {
     try {
 
         const uid = req.uid;
-
         
         // SAVE TASK
+        console.log('================= Body =============');
+        console.log(req.body);
+        console.log('==============================');
+        
         const sms = new Sms(req.body);
+        // SAVE TASK
+        console.log('================= sms =============');
+        console.log(sms);
+        console.log('==============================');
         sms.number = normalizarNumero(number);
 
         if (sms.number.length < 8) {
