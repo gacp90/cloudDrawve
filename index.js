@@ -39,6 +39,7 @@ app.use('/api/rifas', require('./routes/rifa.route'));
 app.use('/api/rutas', require('./routes/ruta.route'));
 app.use('/api/movimientos', require('./routes/movimientos.route'));
 app.use('/api/search', require('./routes/search.route'));
+app.use('/api/sms', require('./routes/sms.route'));
 app.use('/api/tickets', require('./routes/ticket.route'));
 app.use('/api/users', require('./routes/users.route'));
 app.use('/api/uploads', require('./routes/uploads.route'));

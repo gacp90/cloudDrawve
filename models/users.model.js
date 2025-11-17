@@ -99,6 +99,11 @@ const UserSchema = Schema({
         type: Boolean,
         default: false
     },
+
+    gsm: {
+        type: Boolean,
+        default: false
+    },
     
     msg: {
         type: String

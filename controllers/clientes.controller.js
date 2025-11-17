@@ -299,7 +299,7 @@ const updateCliente = async(req, res = response) => {
         // 2️⃣ Actualizar tickets relacionados
         await Ticket.updateMany(
             { cliente: cid },
-            { nombre: clienteUpdate.nombre, telefono: clienteUpdate.telefono, cedula: clienteUpdate.cedula, direccion: clienteUpdate.direccion, ruta: clienteUpdate.ruta, sms: clienteUpdate.sms }
+            { nombre: clienteUpdate.nombre, codigo: clienteUpdate.codigo, telefono: clienteUpdate.codigo + clienteUpdate.telefono, cedula: clienteUpdate.cedula, direccion: clienteUpdate.direccion, ruta: clienteUpdate.ruta, sms: clienteUpdate.sms }
         );
 
         const cliente = await Cliente.findById(cid)
