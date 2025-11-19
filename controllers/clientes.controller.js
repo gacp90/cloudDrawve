@@ -32,7 +32,7 @@ const getClients = async(req, res) => {
             .sort(sort)
             .limit(hasta)
             .skip(desde),
-            Cliente.countDocuments(query)
+            Cliente.countDocuments()
         ]);
 
         res.json({
