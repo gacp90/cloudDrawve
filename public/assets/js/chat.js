@@ -1,6 +1,6 @@
 /*jslint browser: true*/
 /*global $, jQuery, alert*/
-
+const chatFunction = () => {
 $(function() {
 
     "use strict";
@@ -31,3 +31,6 @@ $(function() {
         $(".open-panel i").toggleClass("ti-angle-left");
     });
 });
+}
+
+chatFunction();
