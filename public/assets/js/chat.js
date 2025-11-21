@@ -5,6 +5,9 @@ $(function() {
 
     "use strict";
 
+    console.log('hola chat');
+    
+
     $('.chat-left-inner > .chatonline, .chat-rbox').perfectScrollbar();
 
     var cht = function() {

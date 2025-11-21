@@ -15,6 +15,7 @@ const getSms = async(req, res) => {
 
         const [sms, total] = await Promise.all([
             Sms.find(query)
+            .populate('cliente')
             .limit(hasta)
             .skip(desde)
             .sort(sort),
