@@ -3,10 +3,7 @@
 const chatFunction = () => {
 $(function() {
 
-    "use strict";
-
-    console.log('hola chat');
-    
+    "use strict";    
 
     $('.chat-left-inner > .chatonline, .chat-rbox').perfectScrollbar();
 
