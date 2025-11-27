@@ -854,12 +854,12 @@ const exportTicketsPDF = async (req, res) => {
     //     .fillAndStroke('#05D79C');
 
       doc.roundedRect(x, y, colWidth, rowHeight, 5)
-        .stroke('#2d2d2d');
+        .fillAndStroke('#05D79C');
 
       
 
       // Escribir número en blanco y centrado
-      doc.fillColor('#2d2d2d')
+      doc.fillColor('white')
          .fontSize(18)
          .text(ticket.numero, x, y + 10, { width: colWidth, align: 'center' });
 
