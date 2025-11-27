@@ -821,6 +821,8 @@ const exportTicketsPDF = async (req, res) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
     doc.pipe(res);
 
+    doc.font('Helvetica-Bold');
+
     // ✅ Función para encabezado (lo reutilizamos al cambiar página)
     const drawHeader = () => {
       doc.fontSize(18).text(rifa.name, { align: 'center' });
@@ -831,9 +833,9 @@ const exportTicketsPDF = async (req, res) => {
     drawHeader();
 
     // ✅ Configuración de la cuadrícula
-    const colWidth = 40;   // ancho de cada ticket
-    const rowHeight = 25;  // alto del rectángulo
-    const cols = 12;       // cantidad de tickets por fila
+    const colWidth = 46;   // ancho de cada ticket
+    const rowHeight = 35;  // alto del rectángulo
+    const cols = 10;       // cantidad de tickets por fila
     const space = 5;       // espacio entre tickets
     let x = doc.page.margins.left;
     let y = doc.y;
@@ -848,13 +850,18 @@ const exportTicketsPDF = async (req, res) => {
       }
 
       // Dibujar rectángulo verde
-      doc.rect(x, y, colWidth, rowHeight)
-        .fillAndStroke('#4CAF50');
+    //   doc.rect(x, y, colWidth, rowHeight)
+    //     .fillAndStroke('#05D79C');
+
+      doc.roundedRect(x, y, colWidth, rowHeight, 5)
+        .stroke('#2d2d2d');
+
+      
 
       // Escribir número en blanco y centrado
-      doc.fillColor('white')
-         .fontSize(12)
-         .text(ticket.numero, x, y + 7, { width: colWidth, align: 'center' });
+      doc.fillColor('#2d2d2d')
+         .fontSize(18)
+         .text(ticket.numero, x, y + 10, { width: colWidth, align: 'center' });
 
       // Restaurar color negro
       doc.fillColor('black');
