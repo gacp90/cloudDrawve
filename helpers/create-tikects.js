@@ -30,8 +30,45 @@ const createTickets = async(monto, rifa, numeros) => {
     
 };
 
+/** =====================================================================
+ *  CREATE TICKETS (con agrupación)
+=========================================================================*/
+const createTicketsAgrupado = async (monto, rifa, totalNumeros, grupo = 2) => {
+
+    if (grupo !== 2) {
+        throw new Error('Este patrón solo soporta grupo = 2');
+    }
+
+    const numLength = (totalNumeros - 1).toString().length;
+
+    const mitad = totalNumeros / 2; // 500 si total es 1000
+
+    const ticketsArray = [];
+
+    for (let i = 0; i < mitad; i++) {
+
+        const n1 = i.toString().padStart(numLength, '0');
+
+        // Aquí está el truco: +1 y modulo
+        const n2Index = (i + mitad + 1) % totalNumeros;
+
+        const n2 = n2Index.toString().padStart(numLength, '0');
+
+        ticketsArray.push({
+            numero: `${n1}-${n2}`,
+            monto,
+            rifa
+        });
+    }
+
+    await Ticket.insertMany(ticketsArray);
+    return true;
+};
+
+
 
 // EXPORT
 module.exports = {
-    createTickets
+    createTickets,
+    createTicketsAgrupado
 };

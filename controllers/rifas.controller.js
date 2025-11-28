@@ -1,6 +1,6 @@
 const { response } = require('express');
 
-const { createTickets } = require('../helpers/create-tikects');
+const { createTickets, createTicketsAgrupado } = require('../helpers/create-tikects');
 const Rifa = require('../models/rifas.model');
 const User = require('../models/users.model');
 
@@ -83,6 +83,8 @@ const createRifa = async(req, res = response) => {
 
         const uid = req.uid;
 
+        const { agrupado } = req.body
+
         const userDB = await User.findById(uid);
         if (userDB.role !== 'ADMIN') {
             return res.status(400).json({
@@ -101,7 +103,11 @@ const createRifa = async(req, res = response) => {
 
         await rifa.save();
 
-        await createTickets(rifa.monto, rifa._id, rifa.numeros);
+        if (agrupado) {
+            await createTicketsAgrupado(rifa.monto, rifa._id, rifa.numeros, 2);            
+        }else{
+            await createTickets(rifa.monto, rifa._id, rifa.numeros);
+        }
 
         res.json({
             ok: true,
