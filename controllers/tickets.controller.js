@@ -686,7 +686,7 @@ const paymentsTicketOnline = async(req, res = response) => {
             });
         }
 
-        const existe = await Ticket.findOne({ 'pagos.referencia': campos.referencia });
+        const existe = await Ticket.findOne({ 'pagos.referencia': campos.referencia, rifa: tickets[0].rifa });
         if (existe) {
             return res.status(404).json({
                 ok: false,
