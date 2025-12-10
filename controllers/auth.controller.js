@@ -37,9 +37,9 @@ const login = async(req, res = response) => {
 
             if (userDB.moroso) {
                 return res.status(400).json({
-                ok: false,
-                msg: 'Lo sentimos, tienes una deuda pendiente porfavor contactanos para mayor información!'
-            });
+                    ok: false,
+                    msg: 'Lo sentimos, tienes una deuda pendiente porfavor contactanos para mayor información!'
+                });
             }
 
             if (userDB.status) {
@@ -86,7 +86,15 @@ const renewJWT = async(req, res = response) => {
 
     // SEARCH USER
     const usuario = await User.findById(uid);
-    // SEARCH USER
+    
+    // USER MOROSO
+    if (usuario.moroso) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Lo sentimos, tienes una deuda pendiente porfavor contactanos para mayor información!'
+        });
+    }
+
     usuario.password = '*********';
 
     res.status(200).json({
