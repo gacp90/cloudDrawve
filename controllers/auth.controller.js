@@ -35,6 +35,13 @@ const login = async(req, res = response) => {
             });
         } else {
 
+            if (userDB.moroso) {
+                return res.status(400).json({
+                ok: false,
+                msg: 'Lo sentimos, tienes una deuda pendiente porfavor contactanos para mayor información!'
+            });
+            }
+
             if (userDB.status) {
                 const token = await generarJWT(userDB.id);
                 res.json({
