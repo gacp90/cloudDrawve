@@ -3,6 +3,7 @@ const { response } = require('express');
 const { createTickets, createTicketsAgrupado } = require('../helpers/create-tikects');
 const Rifa = require('../models/rifas.model');
 const User = require('../models/users.model');
+const Ticket = require('../models/ticket.model');
 
 
 /** =====================================================================
@@ -144,7 +145,18 @@ const updateRifa = async(req, res = response) => {
         // SEARCH RIFA
 
         // VALIDATE RIFA
-        let {...campos } = req.body;
+        let {monto, ...campos } = req.body;
+
+        if (rifaDB.monto !== monto) {
+            campos.monto = monto;
+
+            // 2️⃣ Actualizar tickets relacionados
+            await Ticket.updateMany(
+                { rifa: rifid, disponible: true },
+                { monto }
+            );
+            
+        }
 
         // UPDATE
         const rifaUpdate = await Rifa.findByIdAndUpdate(rifid, campos, { new: true, useFindAndModify: false });
