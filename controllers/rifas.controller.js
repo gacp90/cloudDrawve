@@ -102,17 +102,19 @@ const createRifa = async(req, res = response) => {
             rifa.estado = 'Activa';
         }
 
-        await rifa.save();
-
-        if (agrupado) {
-            await createTicketsAgrupado(rifa.monto, rifa._id, rifa.numeros, 2);            
-        }else{
-            await createTickets(rifa.monto, rifa._id, rifa.numeros);
-        }
+        await rifa.save();        
 
         res.json({
             ok: true,
             rifa
+        });
+
+        setImmediate(async() => {
+            if (agrupado) {
+                await createTicketsAgrupado(rifa.monto, rifa._id, rifa.numeros, 2);            
+            }else{
+                await createTickets(rifa.monto, rifa._id, rifa.numeros);
+            }
         });
 
     } catch (error) {
