@@ -69,12 +69,7 @@ const getTicket = async(req, res) => {
                 Ticket.aggregate([
                     { $match: { rifa: query.rifa, estado: 'Disponible' } },
                     { $sample: { size: Number(hasta) || 1000 } } // MongoDB elige 1000 al azar súper rápido
-                ])
-                .populate('ruta')
-                .populate('vendedor')
-                .sort(sort)
-                .limit(hasta)
-                .skip(desde),
+                ]),
                 Ticket.countDocuments({ rifa: query.rifa }),
                 Ticket.countDocuments({ rifa: query.rifa, estado: 'Disponible' }),
                 Ticket.countDocuments({ rifa: query.rifa, estado: 'Apartado' }),
