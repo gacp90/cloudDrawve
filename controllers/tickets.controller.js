@@ -67,7 +67,7 @@ const getTicket = async(req, res) => {
 
             const [tickets, total, disponibles, apartados, pagados] = await Promise.all([
                 Ticket.aggregate([
-                    { $match: { rifa: mongoose.Types.ObjectId(query.rifa), estado: 'Disponible' } },
+                    { $match: { rifa: new ObjectId(query.rifa), estado: 'Disponible' } },
                     { $sample: { size: Number(hasta) || 1000 } } // MongoDB elige 1000 al azar súper rápido
                 ])
                 .populate('ruta')
