@@ -63,11 +63,7 @@ const getTicket = async(req, res) => {
 
         const { desde, hasta, random, sort, ...query } = req.body;
 
-        if (!random) {
-            random = false;
-        }
-
-        if (random === 'true') {
+        if (random) {
 
             const [tickets, total, disponibles, apartados, pagados] = await Promise.all([
                 Ticket.aggregate([
