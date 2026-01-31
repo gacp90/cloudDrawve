@@ -61,29 +61,63 @@ const getTicket = async(req, res) => {
 
     try {
 
-        const { desde, hasta, sort, ...query } = req.body;
+        const { desde, hasta, random, sort, ...query } = req.body;
 
-        const [tickets, total, disponibles, apartados, pagados] = await Promise.all([
-            Ticket.find(query)
-            .populate('ruta')
-            .populate('vendedor')
-            .sort(sort)
-            .limit(hasta)
-            .skip(desde),
-            Ticket.countDocuments({ rifa: query.rifa }),
-            Ticket.countDocuments({ rifa: query.rifa, estado: 'Disponible' }),
-            Ticket.countDocuments({ rifa: query.rifa, estado: 'Apartado' }),
-            Ticket.countDocuments({ rifa: query.rifa, estado: 'Pagado' }),
-        ]);
+        if (!random) {
+            random = false;
+        }
 
-        res.json({
-            ok: true,
-            tickets,
-            total,
-            disponibles,
-            apartados,
-            pagados
-        });
+        if (random === 'true') {
+
+            const [tickets, total, disponibles, apartados, pagados] = await Promise.all([
+                Ticket.aggregate([
+                    { $match: { rifa: mongoose.Types.ObjectId(query.rifa), estado: 'Disponible' } },
+                    { $sample: { size: Number(hasta) || 1000 } } // MongoDB elige 1000 al azar súper rápido
+                ])
+                .populate('ruta')
+                .populate('vendedor')
+                .sort(sort)
+                .limit(hasta)
+                .skip(desde),
+                Ticket.countDocuments({ rifa: query.rifa }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Disponible' }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Apartado' }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Pagado' }),
+            ]);
+    
+            res.json({
+                ok: true,
+                tickets,
+                total,
+                disponibles,
+                apartados,
+                pagados
+            });
+        }else{
+
+            const [tickets, total, disponibles, apartados, pagados] = await Promise.all([
+                Ticket.find(query)
+                .populate('ruta')
+                .populate('vendedor')
+                .sort(sort)
+                .limit(hasta)
+                .skip(desde),
+                Ticket.countDocuments({ rifa: query.rifa }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Disponible' }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Apartado' }),
+                Ticket.countDocuments({ rifa: query.rifa, estado: 'Pagado' }),
+            ]);
+    
+            res.json({
+                ok: true,
+                tickets,
+                total,
+                disponibles,
+                apartados,
+                pagados
+            });
+        }
+
 
     } catch (error) {
         console.log(error);
