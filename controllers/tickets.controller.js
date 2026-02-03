@@ -202,34 +202,53 @@ const getTicketPaid = async(req, res = response) => {
         ]);
 
         // CALCULATE TODOS LOS APARTADOS
-        for (let i = 0; i < apartados.length; i++) {
-            const apartado = apartados[i];
+        // Asegúrate de reiniciar la lista antes de comenzar
+        // this.pendientes = []; 
+
+        for (const apartado of apartados) {
+            
+            // 1. Creamos una bandera local para ESTE ticket
+            let tienePagoPendiente = false; 
 
             if (apartado.pagos && apartado.pagos.length > 0) {
-
+                
                 for (const paid of apartado.pagos) {
+                    
+                    // 2. Seguimos sumando el total global (Tu lógica original)
                     totalApartado += paid.monto;
+                    
+                    // 3. Si encontramos un pendiente, solo activamos la bandera
                     if (paid.estado === 'Pendiente') {
-                        pendientes.push(apartado);
+                        tienePagoPendiente = true;
                     }
                 }
-
             }
 
+            // 4. AL FINALIZAR de revisar los pagos de este ticket:
+            // Si la bandera se quedó en TRUE, guardamos el ticket.
+            // Al estar fuera del 'for' interno, es imposible que se guarde duplicado.
+            if (tienePagoPendiente) {
+                pendientes.push(apartado);
+            }
         }
 
         // CALCULATE TODOS LOS PAGADOS
         for (let i = 0; i < pagados.length; i++) {
             const pagado = pagados[i];
+            let tienePagoPendiente = false; 
 
             if (pagado.pagos && pagado.pagos.length > 0) {
 
                 for (const paid of pagado.pagos) {
                     totalPagado += paid.monto;
                     if (paid.estado === 'Pendiente') {
-                        pendientes.push(pagado);
+                        tienePagoPendiente = true;
                     }
                 }
+            }
+
+            if (tienePagoPendiente) {
+                pendientes.push(pagado);
             }
 
         }
