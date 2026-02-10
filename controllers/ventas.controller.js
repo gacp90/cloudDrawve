@@ -178,7 +178,7 @@ const createVenta = async (req, res = response) => {
             .populate('rifa')
             .populate('tickets.ticket');
 
-        const montoCents = campos.monto * 100;
+        const montoCents = Math.round(venta.monto * 100);
         const moneda = 'COP';
         const secretoIntegridad = process.env.WOMPI_INTEGRITY_SECRET; // Guarda esto en tu .env
         
@@ -195,7 +195,8 @@ const createVenta = async (req, res = response) => {
             ok: true,
             msg: 'Tickets apartados con éxito',
             venta,
-            signature: hashHex
+            signature: hashHex,
+            amountInCents: montoCents
         });
 
     } catch (error) {
