@@ -178,7 +178,7 @@ const createVenta = async (req, res = response) => {
             .populate('rifa')
             .populate('tickets.ticket');
 
-        const montoCents = Math.round(campos.monto * 100);
+        const montoCents = campos.monto * 100;
         const moneda = 'COP';
         const secretoIntegridad = process.env.WOMPI_INTEGRITY_SECRET; // Guarda esto en tu .env
         
