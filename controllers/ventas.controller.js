@@ -180,10 +180,10 @@ const createVenta = async (req, res = response) => {
 
         const montoCents = Math.round(venta.monto * 100);
         const moneda = 'COP';
-        const secretoIntegridad = process.env.WOMPI_INTEGRITY_SECRET; // Guarda esto en tu .env
+        const secretoIntegridad = process.env.WOMPI_INTEGRITY_SECRET; // Guarda esto en tu .env        
         
         // 1. Crear la cadena de texto
-        const cadenaConcatenada = `${venta.vid}${montoCents}${moneda}${secretoIntegridad}`;
+        const cadenaConcatenada = `${venta._id.toString()}${montoCents}${moneda}${secretoIntegridad}`;
 
         // 2. Generar el Hash SHA-256
         const hashHex = crypto
