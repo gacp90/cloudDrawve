@@ -809,6 +809,7 @@ const paymentsTicketOnline = async(req, res = response) => {
                     tdb.telefono = campos.codigo+campos.telefono;
                     tdb.cedula = campos.cedula;
                     tdb.direccion = campos.direccion;
+                    tdb.correo = campos.correo || 'none';
                     tdb.ruta = campos.ruta;
                     tdb.vendedor = campos.vendedor;
                     tdb.estado = 'Apartado';

@@ -43,6 +43,7 @@ app.use('/api/sms', require('./routes/sms.route'));
 app.use('/api/tickets', require('./routes/ticket.route'));
 app.use('/api/users', require('./routes/users.route'));
 app.use('/api/uploads', require('./routes/uploads.route'));
+app.use('/api/sales', require('./routes/venta.route'));
 
 // SPA
 app.get('*', (req, res) => {
