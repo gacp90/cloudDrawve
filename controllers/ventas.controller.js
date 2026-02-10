@@ -1,6 +1,7 @@
 const { response } = require('express');
 
 const ObjectId = require('mongoose').Types.ObjectId;
+const crypto = require('crypto');
 
 const Venta = require('../models/ventas.model');
 const Ticket = require('../models/ticket.model');
@@ -177,10 +178,24 @@ const createVenta = async (req, res = response) => {
             .populate('rifa')
             .populate('tickets.ticket');
 
+        const montoCents = Math.round(campos.monto * 100);
+        const moneda = 'COP';
+        const secretoIntegridad = process.env.WOMPI_INTEGRITY_SECRET; // Guarda esto en tu .env
+        
+        // 1. Crear la cadena de texto
+        const cadenaConcatenada = `${ventaNew._id}${montoCents}${moneda}${secretoIntegridad}`;
+
+        // 2. Generar el Hash SHA-256
+        const hashHex = crypto
+            .createHash('sha256')
+            .update(cadenaConcatenada)
+            .digest('hex');
+
         res.json({
             ok: true,
             msg: 'Tickets apartados con éxito',
-            venta
+            venta,
+            signature: hashHex
         });
 
     } catch (error) {
