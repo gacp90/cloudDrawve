@@ -8,6 +8,8 @@ const axios = require('axios');
 const Venta = require('../models/ventas.model');
 const Ticket = require('../models/ticket.model');
 const Rifa = require('../models/rifas.model');
+const { generarHtmlTickets } = require('../helpers/mails-templates');
+const { sendMail } = require('../helpers/send-mail');
 
 /** =====================================================================
  *  GET QUERY
@@ -128,6 +130,9 @@ const verificarVentaWompi = async(req, res = response) => {
                 { _id: { $in: idsTickets } },
                 { $set: { estado: 'Pagado', disponible: false } }
             );
+
+            const html = await generarHtmlTickets(ventaDB);
+            await sendMail(ventaDB.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
 
             return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
         }

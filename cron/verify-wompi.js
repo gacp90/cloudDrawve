@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const axios = require('axios'); // ¡No olvides importar axios!
 const Venta = require('../models/ventas.model');
 const Ticket = require('../models/ticket.model');
+const { generarHtmlTickets } = require('../helpers/mails-templates');
+const { sendMail } = require('../helpers/send-mail');
 
 const verifyWompi = () => {
     // Ejecutamos cada 10 o 15 minutos para mantener la DB fresca
@@ -38,6 +40,9 @@ const verifyWompi = () => {
                             { $set: { estado: 'Vendido', disponible: false } }
                         );
                         console.log(`[RECUPERADA] Venta ${venta._id} pagada en Wompi.`);
+
+                        const html = await generarHtmlTickets(venta);
+                        await sendMail(venta.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
                         continue; // Saltamos a la siguiente venta, esta ya se salvó
                     }
 
