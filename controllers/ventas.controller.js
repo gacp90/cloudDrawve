@@ -92,7 +92,9 @@ const verificarVentaWompi = async(req, res = response) => {
     const { id } = req.params; // ID de la Venta (referencia)
 
     try {
-        const ventaDB = await Venta.findById(id);
+        const ventaDB = await Venta.findById(id)
+            .populate('rifa')
+            .populate('tickets.ticket');
         if (!ventaDB) {
             return res.status(404).json({ ok: false, msg: 'Venta no encontrada' });
         }
