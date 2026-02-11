@@ -12,8 +12,8 @@ const sendMail = async(email, subject, html, msg) => {
 
         let transporter = nodemailer.createTransport({
             pool: true,
-            host: "smtp.zoho.com",
-            port: 465,
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
             secure: true, // use TLS
             auth: {
                 user: process.env.EMAIL,

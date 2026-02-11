@@ -97,15 +97,10 @@ const verificarVentaWompi = async(req, res = response) => {
             return res.status(404).json({ ok: false, msg: 'Venta no encontrada' });
         }
 
-        if (!ventaDB.signature) {
-            // Generar firma de integridad nuevamente para permitir reintentos si está pendiente
-            const montoCents = ventaDB.monto; // Asegúrate que este campo esté en tu modelo
-            const cadena = `${ventaDB._id.toString()}${montoCents}COP${process.env.WOMPI_INTEGRITY_SECRET}`;
-            ventaDB.signature = crypto.createHash('sha256').update(cadena).digest('hex');            
-        }
-
         // Si ya está pagada, no consultamos a Wompi, ahorramos recursos
         if (ventaDB.estado === 'Pagado') {
+            const html = await generarHtmlTickets(ventaDB);
+            await sendMail(ventaDB.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
             return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
         }
 
@@ -202,6 +197,7 @@ const createVenta = async (req, res = response) => {
                             cedula: campos.cedula,
                             ruta: campos.ruta,
                             codigo: campos.codigo,
+                            direccion: campos.direccion,
                             correo: campos.correo,
                             telefono: campos.codigo + campos.telefono,
                             vendedor: rifaDB.admin,
