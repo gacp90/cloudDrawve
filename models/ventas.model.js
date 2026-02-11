@@ -39,6 +39,13 @@ const VentasSchema = Schema({
     correo: {
         type: String
     },
+    
+    signature: {
+        type: String
+    },
+    amountInCents: {
+        type: Number
+    },
 
     rifa: {
         type: Schema.Types.ObjectId,
@@ -50,7 +57,7 @@ const VentasSchema = Schema({
         type: Boolean
     },
 
-    referencia: {
+    wompi_id: {
         type: String
     },
 

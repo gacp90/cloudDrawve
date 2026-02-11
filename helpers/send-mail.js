@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const smtpTransport = require('nodemailer-smtp-transport');
 
 /** =====================================================================
  *  ENVIAR CORREOS
@@ -23,7 +22,7 @@ const sendMail = async(email, subject, html, msg) => {
         });
 
         const mailOptions = {
-            from: '"Rifari" <contacto@rifari.com>', // sender address (who sends)
+            from: process.env.EMAILF, // sender address (who sends)
             to: email, // list of receivers (who receives)
             subject, // Subject line
             html,

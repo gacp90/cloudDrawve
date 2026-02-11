@@ -3,6 +3,8 @@ const { response } = require('express');
 const ObjectId = require('mongoose').Types.ObjectId;
 const crypto = require('crypto');
 
+const axios = require('axios');
+
 const Venta = require('../models/ventas.model');
 const Ticket = require('../models/ticket.model');
 const Rifa = require('../models/rifas.model');
@@ -64,7 +66,9 @@ const getVentaId = async(req, res = response) => {
 
         res.json({
             ok: true,
-            venta: ventaDB
+            venta: ventaDB,
+            signature: hashHex,
+            amountInCents: montoCents
         });
 
 
@@ -77,6 +81,69 @@ const getVentaId = async(req, res = response) => {
     }
 
 };
+
+/** =====================================================================
+ *  GET ID
+=========================================================================*/
+const verificarVentaWompi = async(req, res = response) => {
+
+    const { id } = req.params; // ID de la Venta (referencia)
+
+    try {
+        const ventaDB = await Venta.findById(id);
+        if (!ventaDB) {
+            return res.status(404).json({ ok: false, msg: 'Venta no encontrada' });
+        }
+
+        if (!ventaDB.signature) {
+            // Generar firma de integridad nuevamente para permitir reintentos si está pendiente
+            const montoCents = ventaDB.monto; // Asegúrate que este campo esté en tu modelo
+            const cadena = `${ventaDB._id.toString()}${montoCents}COP${process.env.WOMPI_INTEGRITY_SECRET}`;
+            ventaDB.signature = crypto.createHash('sha256').update(cadena).digest('hex');            
+        }
+
+        // Si ya está pagada, no consultamos a Wompi, ahorramos recursos
+        if (ventaDB.estado === 'Pagado') {
+            return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
+        }
+
+        // Consultar a Wompi por referencia
+        // Usamos la Private Key para ver detalles de transacciones
+        const { data } = await axios.get(`https://production.wompi.co/v1/transactions?reference=${id}`, {
+            headers: { Authorization: `Bearer ${process.env.WOMPI_PRV_KEY}` }
+        });
+
+        const transaccion = data.data[0]; // Wompi devuelve un array, tomamos la más reciente
+
+        if (transaccion && transaccion.status === 'APPROVED') {
+            // ACTUALIZACIÓN ATÓMICA
+            ventaDB.estado = 'Pagado';
+            // Aquí puedes guardar el ID de transacción de Wompi para auditoría
+            ventaDB.wompi_id = transaccion.id; 
+            await ventaDB.save();
+
+            // Liberar tickets al estado 'Vendido'
+            const idsTickets = ventaDB.tickets.map(t => t.ticket);
+            await Ticket.updateMany(
+                { _id: { $in: idsTickets } },
+                { $set: { estado: 'Pagado', disponible: false } }
+            );
+
+            return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
+        }
+
+        // Si llegó aquí y no está aprobado, devolvemos el estado actual (Pendiente/Rechazado)
+        res.json({
+            ok: true,
+            estado: transaccion ? transaccion.status : 'Pendiente',
+            venta: ventaDB
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ ok: false, msg: 'Error al verificar pago' });
+    }
+}
 
 /** =====================================================================
  *  CREATE
@@ -190,6 +257,11 @@ const createVenta = async (req, res = response) => {
             .createHash('sha256')
             .update(cadenaConcatenada)
             .digest('hex');
+
+        ventaNew.signature = hashHex;
+        ventaNew.amountInCents = montoCents;
+        await ventaNew.save();
+
 
         res.json({
             ok: true,
@@ -327,5 +399,6 @@ module.exports = {
     getVentas,
     getVentaId,
     createVenta,
-    updateVenta
+    updateVenta,
+    verificarVentaWompi
 };

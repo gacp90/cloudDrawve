@@ -6,6 +6,8 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+const {verifyWompi} = require('./cron/verify-wompi');
+
 // const validateHost = require('./middlewares/validateHost');
 
 //Conection DB
@@ -53,3 +55,6 @@ app.get('*', (req, res) => {
 app.listen(process.env.PORT, () => {
     console.log('Servidor Corriendo en el Puerto', process.env.PORT);
 });
+
+// CRONS JOBS
+verifyWompi();
