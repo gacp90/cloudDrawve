@@ -1,7 +1,7 @@
 const generarHtmlTickets = (venta) => {
     const listaTickets = venta.tickets.map(t => 
         `<span style="background-color: #f3b111; color: #000; padding: 5px 10px; border-radius: 5px; font-weight: bold; margin: 5px; display: inline-block;">
-            ${String(t.numero).padStart(3, '0')}
+            ${String(t.ticket.numero).padStart(3, '0')}
         </span>`
     ).join('');
 
@@ -9,7 +9,7 @@ const generarHtmlTickets = (venta) => {
     <div style="background-color: #121212; color: #ffffff; padding: 20px; font-family: sans-serif; border-radius: 10px;">
         <h1 style="color: #f3b111;">¡Pago Confirmado!</h1>
         <p>Hola <strong>${venta.nombre}</strong>,</p>
-        <p>Tu pago por la rifa ha sido procesado exitosamente. Aquí tienes tus números:</p>
+        <p>Tu pago por la rifa "${venta.rifa.name}" ha sido procesado exitosamente. Aquí tienes tus números:</p>
         <div style="background-color: #1e1e1e; padding: 20px; border-radius: 10px; text-align: center;">
             ${listaTickets}
         </div>
