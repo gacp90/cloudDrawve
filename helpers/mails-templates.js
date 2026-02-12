@@ -1,4 +1,7 @@
 const generarHtmlTickets = (venta) => {
+    
+    console.log(venta.rifa.admin);
+    
 
     try {
         const listaTickets = venta.tickets.map(t => 
@@ -27,7 +30,7 @@ const generarHtmlTickets = (venta) => {
 
         <div style="text-align: center;">
             <h1 style="color: #f3b111; font-size: 28px; margin-bottom: 10px;">¡TRANSACCIÓN EXITOSA!</h1>
-            <p style="font-size: 18px; color: #ffffff; margin-bottom: 30px;">Hola <strong>${venta.nombre}</strong>, gracias por la compra. Aquí tienes tus números, han sido reservados para el sorteo de ${venta.rifa.name}.</p>
+            <p style="font-size: 18px; color: #ffffff; margin-bottom: 30px;">Hola <strong>${venta.nombre}</strong>, gracias por la compra. Tus boletas, han sido reservadas exitosamente para el sorteo de ${venta.rifa.name}.</p>
         </div>
         
         <div style="background-color: #1a1a1a; padding: 30px; border-radius: 15px; text-align: center; border: 1px solid #333; margin-bottom: 30px;">
@@ -36,14 +39,14 @@ const generarHtmlTickets = (venta) => {
         </div>
 
         <div style="border-top: 1px solid #333; padding-top: 20px; color: #666; font-size: 13px;">
-            <p style="margin: 5px 0;"><strong>Referencia:</strong> ${venta._id || venta.vid}</p>
+            <p style="margin: 5px 0;"><strong>Referencia:</strong> <a href="${process.env.LOCAL_URL}/verificar-pago/${venta._id || venta.vid}" target="_blank" style="color: #3bb7ff;">${venta._id || venta.vid} <small>(Verificar Pago)</small>   </a> </p>
             <p style="margin: 5px 0;"><strong>Sorteo:</strong> ${venta.rifa.name || 'Sorteo Rifari'}</p>
             <p style="margin: 5px 0;"><strong>Cantidad:</strong> ${venta.tickets.length}</p>
         </div>
 
         <p style="text-align: center; color: #f3b111; font-size: 14px; margin-top: 40px;">
-            ¡Gracias por confiar en Somos Prime CO! Te deseamos mucha suerte.
-            <br>Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a>
+            ¡Gracias por confiar en ${venta.rifa.admin.empresa}! Te deseamos mucha suerte.
+            <br>Enviado automáticamente por ${process.env.LOCAL_URL}, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a>
         </p>
         
     </div>
