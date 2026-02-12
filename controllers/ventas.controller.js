@@ -135,6 +135,8 @@ const verificarVentaWompi = async(req, res = response) => {
         }
 
         // Si llegó aquí y no está aprobado, devolvemos el estado actual (Pendiente/Rechazado)
+        console.log(transaccion);
+        
         res.json({
             ok: true,
             estado: transaccion ? transaccion.status : 'Pendiente',
