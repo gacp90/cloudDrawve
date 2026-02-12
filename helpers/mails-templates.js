@@ -8,7 +8,7 @@ const generarHtmlTickets = (venta) => {
     // 2. Construir URL de la imagen 9:16
     // Ajusta 'process.env.BASE_URL' a tu dominio (ej: https://rifari.com)
     const urlPortada = venta.rifa.portada?.img 
-        ? `${process.env.BASE_URL}/api/upload/portada/${venta.rifa.portada.img}`
+        ? `${process.env.BASE_URL}/api/uploads/portada/${venta.rifa.portada.img}`
         : null;
 
     const imagenHtml = urlPortada 
@@ -34,15 +34,15 @@ const generarHtmlTickets = (venta) => {
         </div>
 
         <div style="border-top: 1px solid #333; padding-top: 20px; color: #666; font-size: 13px;">
-            <p style="margin: 5px 0;"><strong>Referencia:</strong> ${venta._id || venta.vid}</p>
-            <p style="margin: 5px 0;"><strong>Sorteo:</strong> ${venta.rifa.titulo || 'Sorteo Rifari'}</p>
+            <p style="margin: 5px 0;"><strong>Referencia:</strong> <a href="${LOCAL_URL}/verificar-pago/${venta._id}" target="_blank" style="color: #3aa3fa;> ${venta._id || venta.vid} </a></p>
+            <p style="margin: 5px 0;"><strong>Sorteo:</strong> ${venta.rifa.name || 'Sorteo Rifari'}</p>
             <p style="margin: 5px 0;"><strong>Cantidad:</strong> ${venta.tickets.length}</p>
         </div>
 
         <p style="text-align: center; color: #f3b111; font-size: 14px; margin-top: 40px;">
-            ¡Gracias por confiar en Rifari! Te deseamos mucha suerte.
+            ¡Gracias por confiar en Somos Prime CO! Te deseamos mucha suerte.
         </p>
-        <footer style="font-size: 12px; color: #777;">Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a></footer>
+        <p style="font-size: 12px; color: #777; margin-top: 10px">Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a></p>
     </div>
     `;
 };
