@@ -43,8 +43,9 @@ const generarHtmlTickets = (venta) => {
 
         <p style="text-align: center; color: #f3b111; font-size: 14px; margin-top: 40px;">
             ¡Gracias por confiar en Somos Prime CO! Te deseamos mucha suerte.
+            <br>Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a>
         </p>
-        <p style="font-size: 12px; color: #777; margin-top: 10px">Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a></p>
+        
     </div>
     `;
         
