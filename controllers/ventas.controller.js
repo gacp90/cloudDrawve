@@ -89,7 +89,7 @@ const getVentaId = async(req, res = response) => {
 =========================================================================*/
 const verificarVentaWompi = async(req, res = response) => {
 
-    const { id } = req.params; // ID de la Venta (referencia)
+    const { id } = req.params;
 
     try {
         const ventaDB = await Venta.findById(id)
