@@ -1,8 +1,5 @@
 const generarHtmlTickets = (venta) => {
     
-    console.log(venta.rifa.admin);
-    
-
     try {
         const listaTickets = venta.tickets.map(t => 
         `<span style="background-color: #f3b111; color: #000; padding: 8px 12px; border-radius: 5px; font-weight: bold; margin: 5px; display: inline-block; font-family: monospace; font-size: 16px;">

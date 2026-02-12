@@ -107,8 +107,6 @@ const verificarVentaWompi = async(req, res = response) => {
 
         // Si ya está pagada, no consultamos a Wompi, ahorramos recursos
         if (ventaDB.estado === 'Pagado') {
-            const html = await generarHtmlTickets(ventaDB);
-            await sendMail(ventaDB.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
             return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
         }
 
