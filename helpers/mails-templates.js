@@ -1,5 +1,7 @@
 const generarHtmlTickets = (venta) => {
-    const listaTickets = venta.tickets.map(t => 
+
+    try {
+        const listaTickets = venta.tickets.map(t => 
         `<span style="background-color: #f3b111; color: #000; padding: 8px 12px; border-radius: 5px; font-weight: bold; margin: 5px; display: inline-block; font-family: monospace; font-size: 16px;">
            #${String(t.ticket.numero).padStart(3, '0')}
         </span>`
@@ -45,6 +47,12 @@ const generarHtmlTickets = (venta) => {
         <p style="font-size: 12px; color: #777; margin-top: 10px">Enviado automáticamente por somosprime.co, software desarrollado por <a href="https://rifari.com" target="_blank" style="color: #f3b111;">rifari.com</a></p>
     </div>
     `;
+        
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+    
 };
 
 module.exports = { generarHtmlTickets };
