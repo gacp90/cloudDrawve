@@ -34,7 +34,7 @@ const generarHtmlTickets = (venta) => {
         </div>
 
         <div style="border-top: 1px solid #333; padding-top: 20px; color: #666; font-size: 13px;">
-            <p style="margin: 5px 0;"><strong>Referencia:</strong> <a href="${process.env.LOCAL_URL}/verificar-pago/${venta._id}" target="_blank" style="color: #3aa3fa;> ${venta._id || venta.vid} </a></p>
+            <p style="margin: 5px 0;"><strong>Referencia:</strong> <a href="${process.env.LOCAL_URL}/verificar-pago/${venta._id || venta.vid}" target="_blank" style="color: #3aa3fa;> ${venta._id || venta.vid} </a></p>
             <p style="margin: 5px 0;"><strong>Sorteo:</strong> ${venta.rifa.name || 'Sorteo Rifari'}</p>
             <p style="margin: 5px 0;"><strong>Cantidad:</strong> ${venta.tickets.length}</p>
         </div>
