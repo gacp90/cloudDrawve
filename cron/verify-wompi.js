@@ -19,7 +19,15 @@ const verifyWompi = () => {
             const pendientes = await Venta.find({ 
                 estado: { $in: ['Pendiente', 'Rechazado'] },
                 fecha: { $lt: tiempoGraciaVerificacion } 
-            });
+                })
+                .populate({
+                    path: 'rifa',
+                    populate: {
+                        path: 'admin',
+                        select: 'name empresa img phone' // Solo traes lo necesario para el soporte o el correo
+                    }
+                })
+                .populate('tickets.ticket');
 
             for (const venta of pendientes) {
                 try {
