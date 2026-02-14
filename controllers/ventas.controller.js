@@ -26,7 +26,7 @@ const getVentas = async(req, res) => {
             .populate('tickets.ticket')
             .limit(hasta)
             .skip(desde),
-            Venta.countDocuments()
+            Venta.countDocuments(query)
         ]);
 
         res.json({
@@ -286,85 +286,8 @@ const createVenta = async (req, res = response) => {
     }
 };
 
-// const createVenta = async (req, res = response) => {
-//     try {
-//         const { qty, rifa, ...campos } = req.body;
-
-//         const rifaDB = await Rifa.findById(rifa);
-//         if (!rifaDB) {
-//             return res.status(400).json({ ok: false, msg: 'No existe la rifa' });
-//         }
-
-//         // Validaciones de cantidad
-//         if (qty > rifaDB.max || qty < rifaDB.min) {
-//             return res.status(400).json({
-//                 ok: false,
-//                 msg: `Cantidad no permitida (Min: ${rifaDB.min} / Max: ${rifaDB.max})`
-//             });
-//         }
-
-//         // 1. Obtener tickets aleatorios
-//         const ticketsArray = await Ticket.aggregate([
-//             { $match: { rifa: new ObjectId(rifa), estado: 'Disponible' } },
-//             { $sample: { size: Number(qty) } }
-//         ]);
-
-//         if (ticketsArray.length < qty) {
-//             return res.status(400).json({ ok: false, msg: 'No hay suficientes tickets disponibles' });
-//         }
-
-//         // 2. Actualizar tickets uno por uno (o podrías usar updateMany si los datos fueran iguales)
-//         const idsTickets = [];
-        
-//         for (const t of ticketsArray) {
-//             const dataActualizar = {
-//                 nombre: campos.nombre,
-//                 telefono: campos.codigo + campos.telefono,
-//                 cedula: campos.cedula,
-//                 direccion: campos.direccion,
-//                 correo: campos.correo,
-//                 vendedor: campos.vendedor,
-//                 estado: 'Apartado',
-//                 disponible: false,
-//                 pagos: [{
-//                     descripcion: `Pago Wompi de ${qty} ticket(s)`,
-//                     estado: 'Pendiente',
-//                     monto: rifaDB.precio, // Asumiendo que el precio viene de la rifa
-//                     web: true,
-//                 }]
-//             };
-
-//             // Actualizamos el ticket
-//             await Ticket.findByIdAndUpdate(t._id, dataActualizar);
-            
-//             // Formatear para el modelo de Venta: { ticket: id }
-//             idsTickets.push({ ticket: t._id });
-//         }
-
-//         // 3. Crear la Venta
-//         const ventaNew = new Venta({
-//             ...campos,
-//             rifa,
-//             tickets: idsTickets,
-//             monto: rifaDB.precio * qty // Cálculo automático del total
-//         });
-
-//         await ventaNew.save();
-
-//         res.json({
-//             ok: true,
-//             venta: ventaNew
-//         });
-
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({ ok: false, msg: 'Error Inesperado' });
-//     }
-// };
-
-
 /** =====================================================================
- *  UPDATE RUTA
+ *  UPDATE VENTA
 =========================================================================*/
 const updateVenta = async(req, res = response) => {
 
