@@ -57,6 +57,60 @@ const searchTicket = async(req, res = response) => {
 /** =====================================================================
  *  GET TICKET
 =========================================================================*/
+const obtenerPagosPendientes = async (req, res = response) => {
+    try {
+        // Recibimos los filtros desde el body o query (según prefieras)
+        // Ejemplo: { "rifa": "ID_RIFA", "vendedor": "ID_VENDEDOR" }
+        const { rifa, vendedor } = req.body;
+
+        const query = {};
+
+        // 1. Filtro obligatorio: La Rifa
+        if (rifa) {
+            query.rifa = new ObjectId(rifa);
+        }
+
+        // 2. Filtro opcional: El Vendedor (si viene, lo agregamos)
+        if (vendedor) {
+            query.vendedor = new ObjectId(vendedor);
+        }
+
+        // 3. Filtro de Pago Pendiente: Buscamos tickets que tengan 
+        // AL MENOS UN pago con estado 'Pendiente' en su array de pagos
+        query.pagos = { 
+            $elemMatch: { estado: 'Pendiente' } 
+        };
+
+        // 4. Solo tickets activos en el sistema
+        query.status = true;
+
+        // Ejecutamos la consulta y el conteo en paralelo para más velocidad
+        const [tickets, total] = await Promise.all([
+            Ticket.find(query)
+                .populate('vendedor', 'nombre email')
+                .populate('cliente', 'nombre telefono')
+                .sort({ fecha: -1 }),
+            Ticket.countDocuments(query)
+        ]);
+
+        res.json({
+            ok: true,
+            tickets,
+            total
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Hable con el administrador, error al obtener pagos pendientes'
+        });
+    }
+};
+
+/** =====================================================================
+ *  GET TICKET
+=========================================================================*/
 const getTicket = async(req, res) => {
 
     try {
@@ -121,6 +175,10 @@ const getTicket = async(req, res) => {
 
 
 };
+
+/** =====================================================================
+ *  GET PAYMENTS
+=========================================================================*/
 
 
 /** =====================================================================
@@ -942,5 +1000,6 @@ module.exports = {
     ticketGanador,
     updateVendedor,
     saveTicketsMasives,
-    exportTicketsPDF
+    exportTicketsPDF,
+    obtenerPagosPendientes
 };

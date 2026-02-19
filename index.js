@@ -57,4 +57,6 @@ app.listen(process.env.PORT, () => {
 });
 
 // CRONS JOBS
-verifyWompi();
+if (process.env.WOMPI === 'true') {
+    verifyWompi();    
+}
