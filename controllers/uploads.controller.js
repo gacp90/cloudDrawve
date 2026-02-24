@@ -14,6 +14,7 @@ const { updateImage } = require('../helpers/update-image');
 
 // MODELS
 const Rifa = require('../models/rifas.model')
+const Product = require('../models/products.model')
 
 /** =====================================================================
  *  UPLOADS
@@ -24,7 +25,7 @@ const fileUpload = async(req, res = response) => {
     const id = req.params.id;
     const desc = req.query.desc || 'img';
 
-    const validType = ['rifa', 'user', 'portada'];
+    const validType = ['rifa', 'user', 'portada', 'products'];
 
     // VALID TYPES
     if (!validType.includes(tipo)) {
@@ -85,6 +86,24 @@ const fileUpload = async(req, res = response) => {
             });
 
     } else if(tipo === 'portada'){
+
+        sharp(req.files.image.data)
+            .webp({ equality: 75, effort: 6 })
+            .toFile(path, (err, info) => {
+
+                // UPDATE IMAGE
+                updateImage(tipo, id, nameFile, desc);
+
+                res.json({
+                    ok: true,
+                    msg: 'Imagen Actualizada',
+                    nombreArchivo: nameFile,
+                    date: Date.now()
+                });
+
+            });
+
+    }  else if(tipo === 'products'){
 
         sharp(req.files.image.data)
             .webp({ equality: 75, effort: 6 })
@@ -212,6 +231,50 @@ const deleteImg = async(req, res = response) => {
                 res.json({
                     ok: true,
                     rifa
+                });
+
+                break;
+            case 'products':
+
+                // COMPROVAR QUE EL ID ES VALIDO
+                if (!ObjectId.isValid(id)) {
+                    return res.status(404).json({
+                        ok: false,
+                        msg: 'Error en el ID del producto'
+                    });
+                }
+
+                const productDB = await Product.findById(id);
+                if (!rifaDB) {
+                    return res.status(404).json({
+                        ok: false,
+                        msg: 'No existe ninguna rifa con este ID'
+                    });
+                }
+
+                const deleteImgProduct = await Product.updateOne({ _id: id }, { $pull: { img: { img } } });
+
+
+                // VERIFICAR SI SE ACTUALIZO
+                if (deleteImgProduct.nModified === 0) {
+                    return res.status(400).json({
+                        ok: false,
+                        msg: 'No se pudo eliminar esta imagen, porfavor intente de nuevo'
+                    });
+                }
+
+                // ELIMINAR IMAGEN DE LA CARPETA
+                const pathProduct = `./uploads/${ type }/${ img }`;
+                if (fs.existsSync(pathProduct)) {
+                    // DELET IMAGE OLD
+                    fs.unlinkSync(pathProduct);
+                }
+
+                const product = await Product.findById(id);
+
+                res.json({
+                    ok: true,
+                    product
                 });
 
                 break;

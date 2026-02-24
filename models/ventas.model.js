@@ -7,6 +7,26 @@ const TickestSchema = Schema({
     },
 });
 
+const ItemsSchema = Schema({
+    producto: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'products' 
+    },
+    
+    tallaSeleccionada: { 
+        type: String 
+    },
+
+    colorSeleccionado: { 
+        type: String 
+    },
+    
+    qty: { 
+        type: Number, 
+        default: 1 
+    },
+});
+
 const VentasSchema = Schema({
 
     tickets: [TickestSchema],
@@ -43,7 +63,12 @@ const VentasSchema = Schema({
     signature: {
         type: String
     },
+
     amountInCents: {
+        type: Number
+    },
+
+    deliveryprice: {
         type: Number
     },
 
@@ -65,6 +90,13 @@ const VentasSchema = Schema({
         type: String,
         default: 'Pendiente'
     },
+
+    items: [ItemsSchema],
+
+    nota: {
+        type: String
+    },
+
 
     status: {
         type: Boolean,

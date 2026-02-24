@@ -193,10 +193,10 @@ const createVenta = async (req, res = response) => {
 
             if (seleccionados.length === 0) break; // Ya no hay más tickets físicos en la DB
 
-            // 2. Intentamos "secuestrar" esos tickets de forma atómica
+            // 2. Intentamos "tomar" esos tickets de forma atómica
             for (const t of seleccionados) {
                 const reservado = await Ticket.findOneAndUpdate(
-                    { _id: t._id, estado: 'Disponible' }, // Condición de victoria
+                    { _id: t._id, estado: 'Disponible' }, // SELECCION ATOMICA DEL TICKET DISPONIBLE
                     { 
                         $set: { 
                             estado: 'Apartado',
@@ -225,7 +225,7 @@ const createVenta = async (req, res = response) => {
                 if (reservado) {
                     ticketsReservados.push({ ticket: reservado._id });
                 }
-                // Si 'reservado' es null, alguien lo ganó. El bucle 'while' se encargará.
+                // Si 'reservado' es null, alguien ya lo reservo. El bucle 'while' se encargará de buscar otro disponible.
             }
             intentos++;
         }

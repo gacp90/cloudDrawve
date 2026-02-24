@@ -105,6 +105,11 @@ const UserSchema = Schema({
         default: false
     },
 
+    products: {
+        type: Boolean,
+        default: false
+    },
+
     moroso: {
         type: Boolean,
         default: false

@@ -3,6 +3,7 @@ const fs = require('fs');
 // MODELS
 const User = require('../models/users.model');
 const Rifa = require('../models/rifas.model');
+const Product = require('../models/products.model');
 
 /** =====================================================================
  *  DELETE IMAGE
@@ -69,6 +70,23 @@ const updateImage = async(tipo, id, nameFile, desc) => {
 
             // BREAK PRODUCT
             break;
+
+        case 'products':
+
+            const productDB = await Product.findById(id);
+            if (!productDB) {
+                return false;
+            }
+
+           productDB.img.push({
+                img: nameFile,
+                fecha: new Date(Date.now())
+            })
+
+            await rifa.save();
+            // BREAK PRODUCT
+            break;
+            return true;
 
         case 'user':
 
