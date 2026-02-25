@@ -240,12 +240,15 @@ const createVenta = async (req, res = response) => {
             });
         }
 
+        // PRECIO DEL ITEM
+        campos.item.price = 45000;
+
         // 4. Crear la Venta final
         const ventaNew = new Venta({
             ...campos,
             rifa,
             tickets: ticketsReservados,
-            monto: rifaDB.monto * qty
+            monto: campos.item.price * campos.item.qty,
         });
 
         await ventaNew.save();

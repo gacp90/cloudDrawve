@@ -8,19 +8,28 @@ const TickestSchema = Schema({
 });
 
 const ItemsSchema = Schema({
-    producto: { 
-        type: Schema.Types.ObjectId, 
-        ref: 'products' 
-    },
-    
-    tallaSeleccionada: { 
+        
+    name: { 
         type: String 
     },
 
-    colorSeleccionado: { 
+    size: { 
+        type: String 
+    },
+
+    color: { 
         type: String 
     },
     
+    price: { 
+        type: Number,
+    },
+
+    digital: { 
+        type: Number,
+        default: false
+    },
+
     qty: { 
         type: Number, 
         default: 1 
@@ -52,7 +61,23 @@ const VentasSchema = Schema({
         type: String
     },
 
+    pais: {
+        type: String
+    },
+
+    departamento: {
+        type: String
+    },
+
+    ciudad: {
+        type: String
+    },
+    
     direccion: {
+        type: String
+    },
+
+    guia: {
         type: String
     },
 
@@ -91,12 +116,16 @@ const VentasSchema = Schema({
         default: 'Pendiente'
     },
 
-    items: [ItemsSchema],
+    item: ItemsSchema,
 
     nota: {
         type: String
     },
 
+    donar: {
+        type: Boolean,
+        default: false
+    },
 
     status: {
         type: Boolean,
