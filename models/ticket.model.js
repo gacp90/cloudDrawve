@@ -171,6 +171,8 @@ const TicketsSchema = Schema({
 
 });
 
+TicketsSchema.index({ rifa: 1, estado: 1 });
+
 TicketsSchema.method('toJSON', function() {
 
     const { __v, _id, ...object } = this.toObject();
