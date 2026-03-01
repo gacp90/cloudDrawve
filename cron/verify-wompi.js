@@ -4,10 +4,12 @@ const Venta = require('../models/ventas.model');
 const Ticket = require('../models/ticket.model');
 const { generarHtmlTickets } = require('../helpers/mails-templates');
 const { sendMail } = require('../helpers/send-mail');
+const { generarGuiaSkydropx } = require('../helpers/skydropx');
+const { agregarVentaAColaEnvio } = require('../queues/envio.queue');
 
 const verifyWompi = () => {
     // Ejecutamos cada 10 o 15 minutos para mantener la DB fresca
-    cron.schedule('*/15 * * * *', async () => {
+    cron.schedule('*/1 * * * *', async () => {
         console.log('--- Iniciando barrido de verificación Wompi ---');
         
         const ahora = new Date();
@@ -28,15 +30,15 @@ const verifyWompi = () => {
                     }
                 })
                 .populate('tickets.ticket');
+            for (const venta of pendientes) {                
 
-            for (const venta of pendientes) {
                 try {
                     // 1. INTENTAR RECUPERAR: Consultamos a Wompi
                     const { data } = await axios.get(`https://production.wompi.co/v1/transactions?reference=${venta._id}`, {
                         headers: { Authorization: `Bearer ${process.env.WOMPI_PRV_KEY}` }
                     });
 
-                    const transaccion = data.data[0];
+                    const transaccion = data.data[0];                                    
 
                     if (transaccion && transaccion.status === 'APPROVED') {
                         venta.estado = 'Pagado';
@@ -45,12 +47,21 @@ const verifyWompi = () => {
 
                         await Ticket.updateMany(
                             { _id: { $in: venta.tickets.map(t => t.ticket) } },
-                            { $set: { estado: 'Vendido', disponible: false } }
+                            { $set: { estado: 'Pagado', disponible: false } }
                         );
                         console.log(`[RECUPERADA] Venta ${venta._id} pagada en Wompi.`);
 
-                        const html = await generarHtmlTickets(venta);
-                        await sendMail(venta.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
+                        // const html = await generarHtmlTickets(venta);
+                        // await sendMail(venta.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
+
+                        // CREAR ENVIO CON SKYDROPX
+                        if (venta.pais === 'Colombia' && !venta.donar) {
+                            console.log('ID DE VENTA: ', venta._id);
+                            
+                            await agregarVentaAColaEnvio(venta._id);
+                            console.log("Venta enviada a la cola de procesamiento asíncrono.");                          
+                        }
+
                         continue; // Saltamos a la siguiente venta, esta ya se salvó
                     }
 
@@ -67,6 +78,7 @@ const verifyWompi = () => {
                                     ganador: false,
                                     status: true,
                                     pagos: [],
+                                    tickets: [],
                                     // Limpiamos datos del cliente para que el ticket sea nuevo
                                     cedula: undefined, nombre: undefined, telefono: undefined,
                                     codigo: undefined, direccion: undefined, ruta: undefined,

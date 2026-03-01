@@ -26,7 +26,7 @@ const ItemsSchema = Schema({
     },
 
     digital: { 
-        type: Number,
+        type: Boolean,
         default: false
     },
 
@@ -119,6 +119,10 @@ const VentasSchema = Schema({
     item: ItemsSchema,
 
     nota: {
+        type: String
+    },
+
+    statusEnvio: {
         type: String
     },
 

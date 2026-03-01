@@ -10,6 +10,7 @@ const Ticket = require('../models/ticket.model');
 const Rifa = require('../models/rifas.model');
 const { generarHtmlTickets } = require('../helpers/mails-templates');
 const { sendMail } = require('../helpers/send-mail');
+const { agregarVentaAColaEnvio } = require('../queues/envio.queue');
 
 /** =====================================================================
  *  GET QUERY
@@ -18,14 +19,15 @@ const getVentas = async(req, res) => {
 
     try {
 
-        const { desde, hasta, ...query } = req.body;
+        const { desde, hasta, sort, ...query } = req.body;
 
         const [ventas, total] = await Promise.all([
             Venta.find(query)
             .populate('rifa')
             .populate('tickets.ticket')
             .limit(hasta)
-            .skip(desde),
+            .skip(desde)
+            .sort(sort),
             Venta.countDocuments(query)
         ]);
 
@@ -135,6 +137,12 @@ const verificarVentaWompi = async(req, res = response) => {
             const html = await generarHtmlTickets(ventaDB);
             await sendMail(ventaDB.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
 
+            // CREAR ENVIO CON SKYDROPX
+            if (ventaDB.pais === 'Colombia' && ventaDB.donar) {
+                await agregarVentaAColaEnvio(id);
+                console.log("Venta enviada a la cola de procesamiento asíncrono.");                          
+            }
+
             return res.json({ ok: true, estado: 'Pagado', venta: ventaDB });
         }
 
@@ -237,6 +245,7 @@ const createVenta = async (req, res = response) => {
             rifa,
             tickets: ticketsReservadosFinales,
             monto: montoTotal,
+            statusEnvio: (campos.donar)? 'Donado': 'Pendiente',
         });
 
         // 3. Firma Wompi

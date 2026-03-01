@@ -1,5 +1,7 @@
 //Env
 require('dotenv').config();
+require('./queues/envio.worker');
+
 const path = require('path');
 
 const express = require('express');
