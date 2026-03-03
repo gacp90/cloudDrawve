@@ -38,8 +38,7 @@ router.post('/', [
 /** =====================================================================
  *  POST CREATE CLIENT WEB
 =========================================================================*/
-router.post('/create/web', [
-        validarJWT,    
+router.post('/create/web', [   
         check('nombre', 'El nombre es olbigatorio').not().isEmpty(),
         check('telefono', 'El telefono es obligatorio').not().isEmpty(),
         check('cedula', 'La Cedula es obligatoria').not().isEmpty(),
