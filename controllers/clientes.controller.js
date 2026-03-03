@@ -153,6 +153,52 @@ const createCliente = async(req, res = response) => {
 };
 
 /** =====================================================================
+ *  CREATE CLIENT
+=========================================================================*/
+const createClienteWeb = async(req, res = response) => {
+
+    try {
+                   
+        const cliente = new Cliente(req.body);
+        
+        // ASIGNAR ADMIN
+        cliente.admin = '697bf1068ebdc7fc7b707885';
+
+        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula, admin: cliente.admin });        
+        if (validarCedula) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Ya existe un cliente con este numero de cedula.'
+            });
+        }
+        
+        // SI VIENE EL CORREO
+        if (cliente.email) {
+            cliente.email = email = email.trim().toLowerCase();
+        }
+        
+        // SAVE CLIENTE
+        await cliente.save();
+
+        const clienteN = await Cliente.findById(cliente._id)
+            .populate('ruta')
+            .populate('admin');
+
+        res.json({
+            ok: true,
+            cliente: clienteN
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error inesperado al crear el cliente'
+        });
+    }
+};
+
+/** =====================================================================
  *  SAVE CLIENTS MASIVES
 =========================================================================*/
 const createClientsMasives = async(req, res = response) => {
@@ -395,6 +441,7 @@ const deleteCliente = async(req, res = response) => {
 module.exports = {
     getClients,
     createCliente,
+    createClienteWeb,
     updateCliente,
     deleteCliente,
     getClienteId,

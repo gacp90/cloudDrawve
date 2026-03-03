@@ -11,64 +11,71 @@ const { sendMail } = require('../helpers/send-mail');
 =========================================================================*/
 const login = async(req, res = response) => {
 
+    // 1. Extraer y asegurar que tratamos con strings
     let { email, password } = req.body;
-    email = email.trim().toLowerCase();
+    
+    // Forzamos a string para evitar que métodos como .trim() fallen 
+    // si alguien logra enviar un tipo de dato inesperado.
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanPassword = String(password || '');
 
     try {
 
-        // VALIDATE USER
-        const userDB = await User.findOne({ email });
+        // 2. BUSCAR USUARIO
+        const userDB = await User.findOne({ email: cleanEmail });
+        
+        // Usamos el mismo error 401 para usuario no encontrado...
         if (!userDB) {
-            return res.status(404).json({
+            return res.status(401).json({
                 ok: false,
-                msg: 'El email o la contraseña es incorrecta'
+                msg: 'El email o la contraseña son incorrectos'
             });
         }
-        // VALIDATE USER
 
-        // PASSWORD
-        const validPassword = bcrypt.compareSync(password, userDB.password);
+        // 3. VALIDAR CONTRASEÑA
+        const validPassword = bcrypt.compareSync(cleanPassword, userDB.password);
+        
+        // ...y el mismo error 401 para contraseña incorrecta.
         if (!validPassword) {
-            return res.status(400).json({
+            return res.status(401).json({
                 ok: false,
-                msg: 'El email o la contraseña es incorrecta'
+                msg: 'El email o la contraseña son incorrectos'
             });
-        } else {
-
-            if (userDB.moroso) {
-                return res.status(400).json({
-                    ok: false,
-                    msg: 'Lo sentimos, tienes una deuda pendiente porfavor contactanos para mayor información!'
-                });
-            }
-
-            if (userDB.status) {
-                const token = await generarJWT(userDB.id);
-                res.json({
-                    ok: true,
-                    token
-                });
-            } else {
-                return res.status(401).json({
-                    ok: false,
-                    msg: 'Tu cuenta a sido desactivada por un administrador'
-                });
-            }
-
         }
 
-        // JWT - JWT
+        // 4. VALIDACIONES DE NEGOCIO (Después de autenticar)
+        
+        // Caso: Moroso
+        if (userDB.moroso) {
+            return res.status(403).json({ // 403 Forbidden: Entiendo quién eres, pero no te dejo pasar
+                ok: false,
+                msg: 'Lo sentimos, tienes una deuda pendiente. Por favor contáctanos.'
+            });
+        }
+
+        // Caso: Cuenta desactivada
+        if (!userDB.status) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'Tu cuenta ha sido desactivada por un administrador'
+            });
+        }
+
+        // 5. GENERAR TOKEN
+        const token = await generarJWT(userDB.id);
+        
+        res.json({
+            ok: true,
+            token
+        });
 
     } catch (error) {
         console.log(error);
         return res.status(500).json({
             ok: false,
-            msg: 'Error inesperado'
+            msg: 'Error inesperado, hable con el administrador'
         });
-
     }
-
-
 };
 /** =====================================================================
  *  LOGIN

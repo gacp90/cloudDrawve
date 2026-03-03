@@ -8,7 +8,7 @@ const { check } = require('express-validator');
 const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
-const { getClients, getClienteId, createCliente, updateCliente, deleteCliente, createClientsMasives } = require('../controllers/clientes.controller');
+const { getClients, getClienteId, createCliente, updateCliente, deleteCliente, createClientsMasives, createClienteWeb } = require('../controllers/clientes.controller');
 
 const router = Router();
 
@@ -25,13 +25,28 @@ router.get('/user/:id', validarJWT, getClienteId);
 /** =====================================================================
  *  POST CREATE CLIENT
 =========================================================================*/
-router.post('/', [        
+router.post('/', [
+        validarJWT,    
         check('nombre', 'El nombre es olbigatorio').not().isEmpty(),
         check('telefono', 'El telefono es obligatorio').not().isEmpty(),
         check('cedula', 'La Cedula es obligatoria').not().isEmpty(),
         validarCampos
     ],
     createCliente
+);
+
+/** =====================================================================
+ *  POST CREATE CLIENT WEB
+=========================================================================*/
+router.post('/create/web', [
+        validarJWT,    
+        check('nombre', 'El nombre es olbigatorio').not().isEmpty(),
+        check('telefono', 'El telefono es obligatorio').not().isEmpty(),
+        check('cedula', 'La Cedula es obligatoria').not().isEmpty(),
+        check('correo', 'La Cedula es obligatoria').isEmail(),
+        validarCampos
+    ],
+    createClienteWeb
 );
 
 /** =====================================================================

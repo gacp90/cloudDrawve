@@ -17,7 +17,7 @@ const router = Router();
  *  LOGIN
 =========================================================================*/
 router.post('/', [
-        check('email', 'El email es olbigatorio').not().isEmpty(),
+        check('email', 'El email es olbigatorio').isEmail(),
         check('password', 'La contraseña es obligatoria').not().isEmpty(),
         validarCampos
     ],
@@ -33,7 +33,7 @@ router.get('/renew', validarJWT, renewJWT);
  *  RECUPERAR CONTRASEÑA
 =========================================================================*/
 router.post('/recuperar/password', [
-        check('email', 'El email es obligatorio').not().isEmpty(),
+        check('email', 'El email es obligatorio').isEmail(),
         validarCampos
     ],
     rePass
