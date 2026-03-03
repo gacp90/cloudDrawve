@@ -2,8 +2,8 @@ const Redis = require('ioredis');
 
 // Conexión a Redis (asumiendo que está en el mismo VPS)
 const connection = new Redis({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
+    host: '127.0.0.1',
+    port: '6379',
     maxRetriesPerRequest: null // Requerido por BullMQ
 });
 

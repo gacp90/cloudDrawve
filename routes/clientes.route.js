@@ -25,8 +25,7 @@ router.get('/user/:id', validarJWT, getClienteId);
 /** =====================================================================
  *  POST CREATE CLIENT
 =========================================================================*/
-router.post('/', [
-        validarJWT,
+router.post('/', [        
         check('nombre', 'El nombre es olbigatorio').not().isEmpty(),
         check('telefono', 'El telefono es obligatorio').not().isEmpty(),
         check('cedula', 'La Cedula es obligatoria').not().isEmpty(),
