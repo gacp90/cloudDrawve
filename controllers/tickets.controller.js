@@ -904,6 +904,9 @@ const exportTicketsPDF = async (req, res) => {
   try {
     const { rifaId } = req.params;
 
+    let estado = req.query.estado || 'Disponible';
+    
+
     // 📌 Buscar rifa
     const rifa = await Rifa.findById(rifaId);
     if (!rifa) {
@@ -911,7 +914,7 @@ const exportTicketsPDF = async (req, res) => {
     }
 
     // 📌 Buscar tickets disponibles
-    const tickets = await Ticket.find({ estado: 'Disponible', rifa: rifaId }).sort({ numero: 1 });
+    const tickets = await Ticket.find({ estado, rifa: rifaId }).sort({ numero: 1 });
 
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ msg: 'No hay tickets disponibles' });
