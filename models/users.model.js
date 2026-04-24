@@ -80,6 +80,10 @@ const UserSchema = Schema({
         type: String
     },
 
+    internalApiKey: {
+        type: String
+    },
+
     wati: {
         type: Boolean,
         default: false
