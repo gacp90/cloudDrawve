@@ -95,6 +95,9 @@ const renewJWT = async(req, res = response) => {
     const usuario = await User.findById(uid);
     
     // USER MOROSO
+    if (!usuario.moroso) {
+        usuario.moroso = false;
+    }
     if (usuario.moroso) {
         return res.status(400).json({
             ok: false,

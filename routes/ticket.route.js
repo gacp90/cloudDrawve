@@ -40,7 +40,7 @@ router.get('/ingresos/:rifa', validarJWT, getTicketPaid);
 /** =====================================================================
  *  POST EXPORT TICKETS AVAILABLE
 =========================================================================*/
-router.get('/pdf/:rifaId', exportTicketsPDF);
+router.post('/pdf/:rifaId', exportTicketsPDF);
 
 /** =====================================================================
  *  GET SEARCH TICKET

@@ -903,8 +903,11 @@ const paymentsTicketOnline = async(req, res = response) => {
 const exportTicketsPDF = async (req, res) => {
   try {
     const { rifaId } = req.params;
+    const filtrosFrontend = req.body; // Recibimos los filtros desde Angular
 
-    let estado = req.query.estado || 'Disponible';
+    delete filtrosFrontend.desde;
+    delete filtrosFrontend.hasta;
+    delete filtrosFrontend.sort;
     
 
     // 📌 Buscar rifa
@@ -912,42 +915,44 @@ const exportTicketsPDF = async (req, res) => {
     if (!rifa) {
       return res.status(404).json({ msg: 'Rifa no encontrada' });
     }
-
-    // 📌 Buscar tickets disponibles
-    const tickets = await Ticket.find({ estado, rifa: rifaId }).sort({ numero: 1 });
+    
+    // 📌 Buscar tickets con los filtros aplicados
+    const tickets = await Ticket.find(filtrosFrontend).sort({ numero: 1 });
 
     if (!tickets || tickets.length === 0) {
-      return res.status(404).json({ msg: 'No hay tickets disponibles' });
+      return res.status(404).json({ msg: 'No se encontraron tickets con esos filtros' });
     }
 
-    // 📌 Crear PDF
+    // 📌 Crear y transmitir el PDF (Streaming)
     res.setHeader('Content-disposition', `attachment; filename="tickets-${rifa.name}.pdf"`);
     res.setHeader('Content-type', 'application/pdf');
 
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    doc.pipe(res);
+    doc.pipe(res); // El PDF viaja directamente al cliente
 
     doc.font('Helvetica-Bold');
 
-    // ✅ Función para encabezado (lo reutilizamos al cambiar página)
+    // ✅ Función para encabezado
     const drawHeader = () => {
       doc.fontSize(18).text(rifa.name, { align: 'center' });
-      doc.fontSize(14).text('Tickets disponibles:', { underline: true });
+      // Cambiamos el texto para que sea dinámico
+      const subtitulo = filtrosFrontend.estado ? `Tickets: ${filtrosFrontend.estado}` : 'Reporte de Tickets';
+      doc.fontSize(14).text(subtitulo, { underline: true });
       doc.moveDown(1);
     };
 
     drawHeader();
 
+    // ... (Todo tu código de la cuadrícula se mantiene exactamente igual) ...
     // ✅ Configuración de la cuadrícula
-    const colWidth = 46;   // ancho de cada ticket
-    const rowHeight = 35;  // alto del rectángulo
-    const cols = 10;       // cantidad de tickets por fila
-    const space = 5;       // espacio entre tickets
+    const colWidth = 46;
+    const rowHeight = 35;
+    const cols = 10;
+    const space = 5;
     let x = doc.page.margins.left;
     let y = doc.y;
 
     tickets.forEach((ticket, index) => {
-      // 🔎 Verificar si hay espacio en la página
       if (y + rowHeight + doc.page.margins.bottom > doc.page.height) {
         doc.addPage();
         drawHeader();
@@ -955,27 +960,15 @@ const exportTicketsPDF = async (req, res) => {
         y = doc.y;
       }
 
-      // Dibujar rectángulo verde
-    //   doc.rect(x, y, colWidth, rowHeight)
-    //     .fillAndStroke('#05D79C');
+      doc.roundedRect(x, y, colWidth, rowHeight, 5).stroke('#2d2d2d');
 
-      doc.roundedRect(x, y, colWidth, rowHeight, 5)
-        .stroke('#2d2d2d');
-
-      
-
-      // Escribir número en blanco y centrado
       doc.fillColor('#2d2d2d')
          .fontSize(18)
          .text(ticket.numero, x, y + 10, { width: colWidth, align: 'center' });
 
-      // Restaurar color negro
       doc.fillColor('black');
 
-      // Avanzar a la siguiente columna
       x += colWidth + space;
-
-      // Saltar de fila al completar columnas
       if ((index + 1) % cols === 0) {
         x = doc.page.margins.left;
         y += rowHeight + space;
