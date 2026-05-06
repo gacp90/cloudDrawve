@@ -1,16 +1,8 @@
 const { response } = require('express');
 
 const Ruta = require('../models/rutas.model');
-
-
 /** =====================================================================
  *  GET RUTAS
- * 
- * 13 promax 650 128gb
- * 13 promax 700
- * 
- * 14 normal 500$ 128 gb
- * 14 promax 750 256 gb
 =========================================================================*/
 const getRutas = async(req, res) => {
 
@@ -19,11 +11,12 @@ const getRutas = async(req, res) => {
         const { desde, hasta, ...query } = req.body;
 
         const [rutas, total] = await Promise.all([
-            Ruta.find(query)
+            Ruta.find(query, 'name status color ruid')
             .limit(hasta)
             .skip(desde),
             Ruta.countDocuments()
         ]);
+        
 
         res.json({
             ok: true,

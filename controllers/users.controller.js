@@ -14,6 +14,16 @@ const getUsers = async(req, res) => {
 
         const { desde, hasta, sort, ...query } = req.body;
 
+        const uid = req.uid;
+        
+        // VERIFICAR SI ES UN ADMIN
+        const user = await User.findById(uid);
+        if (user.role === 'ADMIN') {
+            query.admin = uid;
+        }else {
+            query.admin = user.admin;
+        }
+
         const [users, total] = await Promise.all([
             User.find(query, 'email name role address img valid status fecha')
             .populate('admin')
@@ -51,12 +61,22 @@ const getUserId = async(req, res = response) => {
 
     try {
         const id = req.params.id;
+        
 
         const userDB = await User.findById(id);
         if (!userDB) {
             return res.status(400).json({
                 ok: false,
                 msg: 'No hemos encontrado este usuario, porfavor intente nuevamente.'
+            });
+        }
+        const requesterUid = req.uid;
+        const isSelf = userDB._id.toString() === requesterUid;
+        const isMySeller = userDB.admin && userDB.admin.toString() === requesterUid;
+        if (!isSelf && !isMySeller) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para editar a este usuario'
             });
         }
 
@@ -86,6 +106,15 @@ const createUsers = async(req, res = response) => {
 
 
     try {
+        const uid = req.uid;
+        const admin = await User.findById(uid);
+        if (admin.role !== 'ADMIN') {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para crear este usuario'
+            });
+        }
+
         let { email, password } = req.body;
         email = email.trim().toLowerCase();
 
@@ -131,24 +160,37 @@ const createUsers = async(req, res = response) => {
 /** =====================================================================
  *  UPDATE USER
 =========================================================================*/
-const updateUser = async(req, res = response) => {
-
-    const uid = req.params.id;
+const updateUser = async (req, res = response) => {
+    const targetUid = req.params.id;
+    const requesterUid = req.uid;
 
     try {
-
-        // SEARCH USER
-        const userDB = await User.findById(uid);
+        // 1. SEARCH USER
+        const userDB = await User.findById(targetUid);
         if (!userDB) {
             return res.status(404).json({
                 ok: false,
-                msg: 'No existe ningun usuario con este ID'
+                msg: 'No existe ningún usuario con este ID'
             });
         }
-        // SEARCH USER
 
-        // VALIDATE USER
-        const { password, usuario, ...campos } = req.body;
+        // 2. AUTORIZACIÓN (Lo que propusiste)
+        // Convertimos a string por si Mongoose los devuelve como ObjectId
+        const isSelf = userDB._id.toString() === requesterUid;
+        const isMySeller = userDB.admin && userDB.admin.toString() === requesterUid;
+
+        if (!isSelf && !isMySeller) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para editar a este usuario'
+            });
+        }
+
+        // 3. SEGURIDAD DE CAMPOS (Evitar Mass Assignment)
+        // Extraemos 'admin' y 'role' (o cualquier campo sensible) para que NO se guarden en 'campos'
+        const { password, usuario, admin, role, _id, ...campos } = req.body;
+
+        // 4. VALIDATE USERNAME
         if (userDB.usuario !== usuario) {
             const validarUsuario = await User.findOne({ usuario });
             if (validarUsuario) {
@@ -157,19 +199,22 @@ const updateUser = async(req, res = response) => {
                     msg: 'Ya existe un usuario con este nombre'
                 });
             }
+            // Si no existe, lo agregamos a los campos por actualizar
+            campos.usuario = usuario;
         }
 
+        // 5. ENCRYPT PASSWORD (Si la envía)
         if (password) {
-
-            // ENCRYPTAR PASSWORD
             const salt = bcrypt.genSaltSync();
             campos.password = bcrypt.hashSync(password, salt);
-
         }
 
-        // UPDATE
-        campos.usuario = usuario;
-        const userUpdate = await User.findByIdAndUpdate(uid, campos, { new: true, useFindAndModify: false });
+        // 6. UPDATE
+        // Nota: useFindAndModify ya no es necesario en Mongoose 6+
+        const userUpdate = await User.findByIdAndUpdate(targetUid, campos, { new: true });
+
+        // Es buena práctica no devolver el password en la respuesta, aunque esté encriptado
+        userUpdate.password = '***********'; 
 
         res.json({
             ok: true,
@@ -180,10 +225,9 @@ const updateUser = async(req, res = response) => {
         console.log(error);
         res.status(500).json({
             ok: false,
-            msg: 'Error Inesperado'
+            msg: 'Error Inesperado. Hable con el administrador'
         });
     }
-
 };
 /** =====================================================================
  *  UPDATE USER
