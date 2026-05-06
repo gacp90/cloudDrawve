@@ -5,6 +5,46 @@ const Rifa = require('../models/rifas.model');
 const User = require('../models/users.model');
 const Ticket = require('../models/ticket.model');
 
+/** =====================================================================
+ *  GET RIFAS
+=========================================================================*/
+const getRifaList = async(req, res) => {
+
+    try {
+
+        const { desde, hasta, sort, ...query } = req.body;
+
+        if (!query.admin) {
+            const admin = await User.findOne({role: 'ADMIN'});
+            query.admin = admin._id || admin.uid;
+        }
+
+        const [rifas, total] = await Promise.all([
+            Rifa.find(query)
+            .sort(sort)
+            .limit(hasta)
+            .skip(desde),
+            Rifa.countDocuments(query)
+        ]);
+
+        res.json({
+            ok: true,
+            rifas,
+            total
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Error inesperado, porfavor intente nuevamente'
+        });
+
+    }
+
+
+};
+
 
 /** =====================================================================
  *  GET RIFAS
@@ -14,6 +54,10 @@ const getRifa = async(req, res) => {
     try {
 
         const { desde, hasta, sort, ...query } = req.body;
+        if (!query.admin) {
+            const admin = await User.findOne({role: 'ADMIN'});
+            query.admin = admin._id || admin.uid;
+        }
 
         const [rifas, total] = await Promise.all([
             Rifa.find(query)
@@ -183,5 +227,6 @@ module.exports = {
     getRifa,
     getRifaId,
     createRifa,
-    updateRifa
+    updateRifa,
+    getRifaList
 };
