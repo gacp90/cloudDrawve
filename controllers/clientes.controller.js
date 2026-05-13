@@ -118,7 +118,7 @@ const createCliente = async(req, res = response) => {
             cliente.admin = user.admin;
         }
 
-        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula, admin: cliente.admin });        
+        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula });        
         if (validarCedula) {
             return res.status(400).json({
                 ok: false,
