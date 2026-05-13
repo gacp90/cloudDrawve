@@ -118,13 +118,13 @@ const createCliente = async(req, res = response) => {
             cliente.admin = user.admin;
         }
 
-        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula });        
+        /* const validarCedula = await Cliente.findOne({ cedula: cliente.cedula });        
         if (validarCedula) {
             return res.status(400).json({
                 ok: false,
                 msg: 'Ya existe un cliente con este numero de cedula.'
             });
-        }
+        } */
         
         // SI VIENE EL CORREO
         if (cliente.email) {
