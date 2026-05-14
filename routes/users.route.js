@@ -31,7 +31,6 @@ router.get('/user/:id', validarJWT, getUserId);
  *  POST CREATE USER
 =========================================================================*/
 router.post('/', [
-        validarJWT,
         check('email', 'El email es obligatorio').isEmail(),
         check('name', 'El nombre es olbigatorio').not().isEmpty(),
         check('password', 'La contraseña es obligatoria').not().isEmpty(),

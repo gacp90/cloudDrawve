@@ -111,14 +111,14 @@ const createCliente = async(req, res = response) => {
         const cliente = new Cliente(req.body);
         
         // ASIGNAR ADMIN
-        /* const user = await User.findById(uid);
+        const user = await User.findById(uid);
         if (user.role === 'ADMIN') {
             cliente.admin = uid;
         }else {
             cliente.admin = user.admin;
-        } */
+        }
 
-        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula });        
+        const validarCedula = await Cliente.findOne({ cedula: cliente.cedula, admin: cliente.admin });        
         if (validarCedula) {
             return res.status(400).json({
                 ok: false,

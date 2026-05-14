@@ -106,15 +106,6 @@ const createUsers = async(req, res = response) => {
 
 
     try {
-        const uid = req.uid;
-        const admin = await User.findById(uid);
-        if (admin.role !== 'ADMIN') {
-            return res.status(403).json({
-                ok: false,
-                msg: 'No tienes privilegios para crear este usuario'
-            });
-        }
-
         let { email, password } = req.body;
         email = email.trim().toLowerCase();
 
@@ -152,6 +143,7 @@ const createUsers = async(req, res = response) => {
             msg: 'Error Inesperado'
         });
     }
+
 };
 /** =====================================================================
  *  CREATE USERS
