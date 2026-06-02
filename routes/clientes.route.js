@@ -8,7 +8,7 @@ const { check } = require('express-validator');
 const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
-const { getClients, getClienteId, createCliente, updateCliente, deleteCliente, createClientsMasives, createClienteWeb } = require('../controllers/clientes.controller');
+const { getClients, getClienteId, createCliente, updateCliente, deleteCliente, createClientsMasives, createClienteWeb, buscarClientePorTelefono } = require('../controllers/clientes.controller');
 
 const router = Router();
 
@@ -21,6 +21,11 @@ router.post('/query', validarJWT, getClients);
  *  GET CLIENT ID
 =========================================================================*/
 router.get('/user/:id', validarJWT, getClienteId);
+
+/** =====================================================================
+ *  GET CLIENT FOR PHONE
+=========================================================================*/
+router.get('/buscar-telefono/:telefonoLargo', validarJWT, buscarClientePorTelefono);
 
 /** =====================================================================
  *  POST CREATE CLIENT

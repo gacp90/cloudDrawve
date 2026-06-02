@@ -53,6 +53,65 @@ const getClients = async(req, res) => {
 };
 
 /** =====================================================================
+ *  GET CLIENT FOR PHONE
+=========================================================================*/
+const buscarClientePorTelefono = async (req, res) => {
+    try {
+        const { telefonoLargo } = req.params; 
+
+        // 1. VALIDACIÓN TEMPRANA: Ahorramos recursos de BD si no mandan el teléfono
+        if (!telefonoLargo) {
+            return res.status(400).json({ ok: false, msg: 'Teléfono requerido' });
+        }
+
+        const uid = req.uid;
+        let admin;
+
+        // 2. VERIFICAR EL USUARIO Y SEGURIDAD
+        const user = await User.findById(uid);
+        
+        // CORRECCIÓN 2: Si el usuario ya no existe en BD, cortamos la ejecución
+        if (!user.status || !user) {
+             return res.status(401).json({ ok: false, msg: 'Usuario no autorizado o no existe' });
+        }
+
+        // Lógica Multitenant impecable
+        if (user.role === 'ADMIN') {
+            admin = uid;
+        } else {
+            admin = user.admin;
+        }
+
+        // 3. BUSCAMOS AL CLIENTE AISLADO POR TENANT (admin)
+        const cliente = await Cliente.findOne({
+            admin, // Filtro multitenant
+            $expr: {
+                $eq: [
+                    { $concat: [{ $toString: "$codigo" }, { $toString: "$telefono" }] },
+                    telefonoLargo
+                ]
+            }
+        });
+
+        if (cliente) {
+            return res.status(200).json({
+                ok: true,
+                nombre: `${cliente.nombre}`.trim(),
+                telefonoLargo: telefonoLargo,
+            });
+        } else {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Cliente no encontrado en su base de datos'
+            });
+        }
+    } catch (error) {
+        console.log('Error buscando cliente por teléfono:', error);
+        return res.status(500).json({ ok: false, msg: 'Error interno del servidor' });
+    }
+};
+
+/** =====================================================================
  *  GET CLIENT ID
 =========================================================================*/
 const getClienteId = async(req, res = response) => {
@@ -445,5 +504,6 @@ module.exports = {
     updateCliente,
     deleteCliente,
     getClienteId,
-    createClientsMasives
+    createClientsMasives,
+    buscarClientePorTelefono
 };
