@@ -1,6 +1,8 @@
 const { response } = require('express');
 const bcrypt = require('bcryptjs');
 
+const ObjectId = require('mongoose').Types.ObjectId;
+
 const short = require('short-uuid');
 
 const User = require('../models/users.model');
@@ -180,25 +182,31 @@ const updateUser = async (req, res = response) => {
 
         // 3. SEGURIDAD DE CAMPOS (Evitar Mass Assignment)
         // Extraemos 'admin' y 'role' (o cualquier campo sensible) para que NO se guarden en 'campos'
-        const { password, usuario, admin, role, _id, ...campos } = req.body;
+        const { password, email, admin, role, _id, ...campos } = req.body;
 
         // 4. VALIDATE USERNAME
-        if (userDB.usuario !== usuario) {
-            const validarUsuario = await User.findOne({ usuario });
-            if (validarUsuario) {
+        if (userDB.email !== email) {
+            const validaremail = await User.findOne({ email });
+            if (validaremail) {
                 return res.status(400).json({
                     ok: false,
-                    msg: 'Ya existe un usuario con este nombre'
+                    msg: 'Ya existe un usuario con este email'
                 });
             }
             // Si no existe, lo agregamos a los campos por actualizar
-            campos.usuario = usuario;
+            campos.email = email;
         }
 
         // 5. ENCRYPT PASSWORD (Si la envía)
         if (password) {
             const salt = bcrypt.genSaltSync();
             campos.password = bcrypt.hashSync(password, salt);
+        }
+
+        if (requesterUid === (String)(new ObjectId(userDB.admin))) {
+            if (role !== userDB.role) {
+                campos.role = role;
+            }
         }
 
         // 6. UPDATE
