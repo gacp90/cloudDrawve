@@ -169,6 +169,10 @@ const TicketsSchema = Schema({
         default: true
     },
 
+    fecha: {
+        type: Date
+    },
+
 });
 
 TicketsSchema.index({ rifa: 1, estado: 1 });

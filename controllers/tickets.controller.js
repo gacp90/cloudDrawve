@@ -597,34 +597,61 @@ const saveTicketsMasives = async(req, res = response) => {
 const updateTicket = async(req, res = response) => {
 
     const tid = req.params.id;
+    const vendedorId = req.uid;
 
     try {
+        // 1. Consultas en paralelo para mayor velocidad
+        const [user, ticketDB] = await Promise.all([
+            User.findById(vendedorId),
+            Ticket.findById(tid).populate('rifa')
+        ]);
 
-        // SEARCH TICKET
-        const ticketDB = await Ticket.findById(tid);
         if (!ticketDB) {
-            return res.status(404).json({
+            return res.status(404).json({ ok: false, msg: 'No existe ningun ticket con este ID' });
+        }
+        if (!user) {
+            return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
+        }
+
+        // 2. Evaluamos los permisos (Seguridad)
+        const esElDueño = user._id.toString() === ticketDB.rifa.admin.toString();
+        const esEmpleadoDelDueño = user.admin && user.admin.toString() === ticketDB.rifa.admin.toString();
+
+        if (!esElDueño && !esEmpleadoDelDueño) {
+            return res.status(403).json({
                 ok: false,
-                msg: 'No existe ningun ticket con este ID'
+                msg: 'No tienes privilegios para editar tickets en esta rifa.'
             });
         }
-        // SEARCH TICKET
 
-        // VALIDATE TICKET
-        let {...campos } = req.body;
+        // 3. Limpieza de Payload (Evitamos sobrescribir datos de la reserva)
+        // Todo lo que se extrae explícitamente aquí, NO se actualizará.
+        let { cliente, nombre, codigo, telefono, cedula, direccion, correo, ruta, vendedor, ...campos } = req.body;
 
-        if (!ticketDB.disponible) {
-            if (campos.vendedor) {
-                delete campos.vendedor
-            }
+        if (campos.monto && user.role === 'STAFF') {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para editar el monto del ticket, debes de consultar al administrador.'
+            });
+
         }
 
-        // UPDATE
-        await Ticket.findByIdAndUpdate(tid, campos, { new: true, useFindAndModify: false });
+        // Si campos está vacío después de limpiar, no hay nada que actualizar
+        if (Object.keys(campos).length === 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No se enviaron campos válidos para actualizar.'
+            });
+        }
 
-        const ticketUpdate = await Ticket.findById(tid)
-            .populate('ruta')
-            .populate('vendedor');
+        // 4. Actualización y Populate en un solo paso
+        const ticketUpdate = await Ticket.findByIdAndUpdate(
+            tid, 
+            campos, // Actualiza solo pagos, montos, estado, notas, etc.
+            { new: true, useFindAndModify: false }
+        )
+        .populate('ruta')
+        .populate('vendedor', 'nombre email'); // Es buena práctica limitar los datos que devuelves del vendedor
 
         res.json({
             ok: true,
@@ -632,13 +659,138 @@ const updateTicket = async(req, res = response) => {
         });
 
     } catch (error) {
-        console.log(error);
+        console.log('Error general en updateTicket:', error);
         res.status(500).json({
             ok: false,
-            msg: 'Error Inesperado'
+            msg: 'Error inesperado al actualizar el ticket'
+        });
+    }
+};
+
+/** =====================================================================
+ * RESERVAR TICKETS (ATÓMICO Y MASIVO)
+=========================================================================*/
+const reserveTickets = async(req, res = response) => {
+
+    const { ticketIds, nombre, telefono, cedula, direccion, ruta, estado, nota, vendedor, monto, cliente, rifa } = req.body;
+    const vendedorId = req.uid;
+
+    // 1. Validaciones iniciales de entrada
+    if (!rifa) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Debe proporcionar el ID de la rifa.'
         });
     }
 
+    if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Debe proporcionar una lista válida de IDs de tickets.'
+        });
+    }
+
+    try {
+        // 2. VERIFICACIÓN DE SEGURIDAD (Autorización)
+        // Consultamos la BD en paralelo para mayor velocidad
+        const [userDB, rifaDB] = await Promise.all([
+            User.findById(vendedorId),
+            Rifa.findById(rifa)
+        ]);
+
+        if (!rifaDB) {
+            return res.status(404).json({ ok: false, msg: 'La rifa indicada no existe.' });
+        }
+        if (!userDB) {
+            return res.status(404).json({ ok: false, msg: 'El usuario vendedor no existe.' });
+        }
+
+        // Evaluamos los permisos
+        const esElDueño = userDB._id.toString() === rifaDB.admin.toString();
+        const esEmpleadoDelDueño = userDB.admin && userDB.admin.toString() === rifaDB.admin.toString();
+
+        if (!esElDueño && !esEmpleadoDelDueño) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para reservar tickets en esta rifa.'
+            });
+        }
+
+        const exitosos = [];
+        const fallidos = [];
+        const fechasReserva = new Date();
+
+        // 3. Procesamiento secuencial atómico
+        for (const tid of ticketIds) {
+            try {
+                // El filtro exige que ambos campos reflejen disponibilidad y que el ticket pertenezca a la rifa indicada
+                const ticketReservado = await Ticket.findOneAndUpdate(
+                    { 
+                        _id: tid, 
+                        rifa: rifa, // Añadimos esta validación extra por seguridad
+                        disponible: true, 
+                        estado: 'Disponible' 
+                    }, 
+                    { 
+                        $set: { 
+                            disponible: false, 
+                            estado: estado || 'Apartado', 
+                            vendedor: vendedorId,
+                            cliente: cliente || null,
+                            monto,
+                            nombre: nombre,
+                            telefono: telefono,
+                            cedula: cedula,
+                            direccion: direccion,
+                            fecha: fechasReserva,
+                            ruta: ruta || null, // Cuidado con nulos aquí
+                            nota
+                        } 
+                    },
+                    { new: true, useFindAndModify: false }
+                )
+                .populate('vendedor', 'nombre email') 
+                .populate('cliente', 'nombre telefono');
+
+                if (ticketReservado) {
+                    exitosos.push({
+                        id: tid,
+                        numero: ticketReservado.numero,
+                        estado: ticketReservado.estado
+                    });
+                } else {
+                    const ticketExiste = await Ticket.findById(tid);
+                    fallidos.push({
+                        id: tid,
+                        numero: ticketExiste ? ticketExiste.numero : 'Desconocido',
+                        motivo: ticketExiste ? `No disponible (Estado: ${ticketExiste.estado})` : 'No existe o no pertenece a esta rifa'
+                    });
+                }
+
+            } catch (err) {
+                console.error(`Error aislando ticket ${tid}:`, err);
+                fallidos.push({
+                    id: tid,
+                    motivo: 'Error interno de BD al aislar'
+                });
+            }
+        }
+
+        // 4. Respuesta detallada para el Frontend
+        res.json({
+            ok: true,
+            msg: `Proceso completado. Exitosos: ${exitosos.length} | Fallidos: ${fallidos.length}`,
+            exitosos,
+            fallidos
+        });
+
+    } catch (error) {
+        console.log('Error general en reserveTickets:', error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error inesperado en el servidor'
+        });
+    }
 };
 
 /** =====================================================================
@@ -722,11 +874,19 @@ const restoreTicket = async(req, res = response ) => {
             return res.status(400).json({ ok: false, msg: 'No tienes los privilegios necesario para resetear este ticket' });
         }
 
-        // VERIFICAR SI ES UN ADMIN
-        if (uid !== (String)(new ObjectId(ticket.rifa.admin))) {
-            return res.status(401).json({
+        // ¿Es el dueño directo de la rifa?
+        const esElDueño = uid.toString() === ticket.rifa.admin.toString();
+        
+        // ¿Es un Supervisor contratado por el dueño de la rifa?
+        const esSuperDelDueño = userDB.admin && 
+                                userDB.admin.toString() === ticket.rifa.admin.toString() && 
+                                userDB.role === 'SUPER';
+
+        // Si no cumple ninguna de las dos condiciones, se bloquea la acción
+        if (!esElDueño && !esSuperDelDueño) {
+            return res.status(403).json({
                 ok: false,
-                msg: 'No tienes los privilegios para realizar cambios'
+                msg: 'No tienes autorización para liberar tickets de esta rifa.'
             });
         }
 
@@ -748,6 +908,7 @@ const restoreTicket = async(req, res = response ) => {
         ticket.telefono = undefined;
         ticket.vendedor = undefined;
         ticket.cliente = undefined;
+        ticket.fecha = undefined;
 
         // Guarda los cambios en la base de datos
         await ticket.save();
@@ -997,5 +1158,6 @@ module.exports = {
     updateVendedor,
     saveTicketsMasives,
     exportTicketsPDF,
-    obtenerPagosPendientes
+    obtenerPagosPendientes,
+    reserveTickets
 };
