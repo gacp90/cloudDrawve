@@ -178,6 +178,11 @@ const RifasSchema = Schema({
         default: 50     
     },
 
+    rezagados: {
+        type: Number,
+        default: 0     
+    },
+
     status: {
         type: Boolean,
         default: true

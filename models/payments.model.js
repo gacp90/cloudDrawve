@@ -7,6 +7,11 @@ const paymentsSchema = Schema({
         require: true,
     },
 
+    referencia: {
+        type: String,
+        require: true,
+    },
+
     nombre: {
         type: String,
         require: true,
@@ -34,6 +39,11 @@ const paymentsSchema = Schema({
 
     img: {
         type: String
+    },
+
+    cliente: {
+        type: Schema.Types.ObjectId,
+        ref: 'Clientes'
     },
 
     admin: {
@@ -64,6 +74,11 @@ const paymentsSchema = Schema({
         type: Schema.Types.ObjectId,
         ref: 'Rifas',
         require: true
+    },
+
+    ruta: {
+        type: Schema.Types.ObjectId,
+        ref: 'Rutas'
     },
 
     estado: {

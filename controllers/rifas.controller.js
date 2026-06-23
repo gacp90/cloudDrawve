@@ -15,10 +15,14 @@ const getRifaList = async(req, res) => {
         const { desde, hasta, sort, ...query } = req.body;
 
         if (!query.admin) {
-            const admin = await User.findOne({role: 'ADMIN'});
-            query.admin = admin._id || admin.uid;
+            return res.status(403).json({
+                ok: false,
+                msg: 'Error porfavor intente de nuevo mas tarde'
+            });
         }
 
+        query.admin = query.admin;
+                
         const [rifas, total] = await Promise.all([
             Rifa.find(query)
             .sort(sort)
@@ -55,9 +59,11 @@ const getRifa = async(req, res) => {
 
         const { desde, hasta, sort, ...query } = req.body;
         if (!query.admin) {
-            const admin = await User.findOne({role: 'ADMIN'});
-            query.admin = admin._id || admin.uid;
-        }
+            return res.status(403).json({
+                ok: false,
+                msg: 'Error porfavor intente de nuevo mas tarde'
+            });
+        }       
 
         const [rifas, total] = await Promise.all([
             Rifa.find(query)

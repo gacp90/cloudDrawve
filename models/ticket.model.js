@@ -162,6 +162,8 @@ const TicketsSchema = Schema({
         default: false
     },
 
+    totalPagado: { type: Number, default: 0 },
+
     img: [ImgSchema],
 
     status: {

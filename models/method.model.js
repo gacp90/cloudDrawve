@@ -4,32 +4,33 @@ const methodSchema = Schema({
 
     moneda: {
         type: String,
-        require: true
+        required: true
     },
         
     nombre: {
         type: String,
-        require: true,
+        required: true,
     },
 
     cuenta: {
         type: String,
-        require: true,
+        required: true,
     },
 
     tasa: {
         type: Number,
-        require: true,
+        required: true,
     },
 
-    monto: {
+    saldo: {
         type: Number,
-        require: true,
+        required: true,
+        default: 0
     },
 
     comision: {
         type: Number,
-        require: true,
+        required: true,
     },
 
     admin: {
@@ -57,4 +58,4 @@ methodSchema.method('toJSON', function() {
 
 });
 
-module.exports = model('Methods', methodSchema);
+module.exports = model('Methods', methodSchema, 'methods');

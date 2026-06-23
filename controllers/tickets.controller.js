@@ -115,7 +115,7 @@ const getTicket = async(req, res) => {
 
     try {
 
-        const { desde, hasta, random, sort, ...query } = req.body;
+        const { desde, hasta, random, sort, ...query } = req.body;        
 
         if (random) {
 
@@ -862,8 +862,7 @@ const restoreTicket = async(req, res = response ) => {
         const uid = req.uid;
 
         // Busca el ticket por su ID
-        const ticket = await Ticket.findById(ticketId)
-            .populate('rifa');
+        const ticket = await Ticket.findById(ticketId).populate('rifa');
 
         if (!ticket) {
             return res.status(404).json({ ok: false, msg: 'Ticket no encontrado' });
@@ -871,7 +870,7 @@ const restoreTicket = async(req, res = response ) => {
 
         const userDB = await User.findById(uid);
         if (userDB.role === 'STAFF') {
-            return res.status(400).json({ ok: false, msg: 'No tienes los privilegios necesario para resetear este ticket' });
+            return res.status(403).json({ ok: false, msg: 'No tienes los privilegios necesarios para resetear este ticket' });
         }
 
         // ¿Es el dueño directo de la rifa?
@@ -897,8 +896,9 @@ const restoreTicket = async(req, res = response ) => {
         ticket.ganador = false;
         ticket.status = true;
         ticket.pagos = [];
+        ticket.img = []; // Limpiamos comprobantes viejos
 
-        // Elimina o resetea los campos adicionales
+        // Elimina usando $unset interno de Mongoose
         ticket.cedula = undefined;
         ticket.codigo = undefined;
         ticket.direccion = undefined;
@@ -908,24 +908,33 @@ const restoreTicket = async(req, res = response ) => {
         ticket.telefono = undefined;
         ticket.vendedor = undefined;
         ticket.cliente = undefined;
+        ticket.correo = undefined; // Limpiamos el correo
         ticket.fecha = undefined;
 
-        // Guarda los cambios en la base de datos
-        await ticket.save();
+        // ACTUALIZACIÓN SIMULTÁNEA
+        // Guardamos el ticket limpio y sumamos 1 al contador de rezagados en la Rifa
+        const [ticketU, rifa] = await Promise.all([
+            ticket.save(),
+            Rifa.findByIdAndUpdate(
+                ticket.rifa._id, 
+                { $inc: { rezagados: 1 } },
+                { useFindAndModify: false } // Buena práctica en Mongoose
+            )
+        ]);
 
         res.status(200).json({ 
             ok: true, 
-            ticket 
+            ticket: ticketU,
+            rezagados: rifa.rezagados + 1
         });
 
     } catch (error) {
-        console.log(error);
+        console.log('Error en restoreTicket:', error);
         res.status(500).json({
             ok: false,
             msg: 'Error Inesperado'
         });
     }
-
 };
 
 /** =====================================================================

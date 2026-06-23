@@ -8,7 +8,15 @@ const getRutas = async(req, res) => {
 
     try {
 
-        const { desde, hasta, ...query } = req.body;
+        const { desde, hasta, ...query } = req.body;        
+
+        if (!query.admin) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Error al consultar las rutas, porfavor intente nuevamente!!!'
+            });
+        }
+        
 
         const [rutas, total] = await Promise.all([
             Ruta.find(query, 'name status color ruid')
