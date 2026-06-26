@@ -31,6 +31,35 @@ const MetodoSchema = Schema({
     }
 })
 
+const ParticipacionSchema = Schema({
+    cliente: {
+        type: Schema.Types.ObjectId,
+        ref: 'Clientes',
+        required: true
+    },
+    // Datos denormalizados para envíos masivos rápidos por WhatsApp API
+    nombre: { type: String, required: true },
+    cedula: { type: String, required: true },
+    telefono: { type: String, required: true },
+    codigo: { type: String }, // Ej: +58, +57
+    
+    // Contabilidad Individual (Ej: $10)
+    montoAsignado: { 
+        type: Number,
+        required: true
+    },
+    // Cuánto ha pagado ESTA persona de sus $10
+    totalPagado: { 
+        type: Number,
+        default: 0
+    },
+    // Estado de ESTA persona (Ej: 'Debe', 'Pagado')
+    estadoDeuda: {
+        type: String,
+        default: 'Debe'
+    }
+});
+
 const PagosSchema = Schema({
 
     descripcion: {
@@ -165,6 +194,13 @@ const TicketsSchema = Schema({
     totalPagado: { type: Number, default: 0 },
 
     img: [ImgSchema],
+
+    compradores: [ParticipacionSchema],
+    
+    compartido: {
+        type: Boolean,
+        default: false
+    },
 
     status: {
         type: Boolean,
