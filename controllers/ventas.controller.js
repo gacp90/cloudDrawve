@@ -204,6 +204,7 @@ const createVenta = async (req, res = response) => {
                         correo: campos.correo,
                         rifa: rifa,
                         vendedor: rifaDB.admin,
+                        ruta: '697bf198e4a988edd1af4943',
                         pagos: [{
                             descripcion: `Reserva Wompi: ${qty} boletas`,
                             estado: 'Pendiente',
