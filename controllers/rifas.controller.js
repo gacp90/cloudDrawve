@@ -66,16 +66,79 @@ const getRifa = async(req, res) => {
         }       
 
         const [rifas, total] = await Promise.all([
+            // .lean() es súper importante aquí para poder inyectar la data nueva al objeto
             Rifa.find(query)
             .sort(sort)
             .limit(hasta)
-            .skip(desde),
+            .skip(desde)
+            .lean(), 
             Rifa.countDocuments(query)
         ]);
 
+        // 1. Extraemos los IDs de las rifas que acabamos de obtener
+        const rifasIds = rifas.map(r => r._id);
+
+        // 2. UNA SOLA CONSULTA a Tickets usando aggregation para contar los estados
+        const ticketsStats = await Ticket.aggregate([
+            { 
+                $match: { rifa: { $in: rifasIds } } 
+            },
+            {
+                $group: {
+                    _id: { rifa: "$rifa", estado: "$estado" },
+                    cantidad: { $sum: 1 },
+                    dineroRecaudado: { $sum: "$totalPagado" }
+                }
+            }
+        ]);
+
+        // 3. Transformamos la respuesta de Mongoose en un diccionario rápido de leer
+        const statsMap = {};
+        ticketsStats.forEach(stat => {
+            const rifaId = stat._id.rifa.toString();
+            const estado = stat._id.estado;
+
+            if (!statsMap[rifaId]) {
+                // SOLUCIÓN: Inicializar todas las variables matemáticas en 0
+                statsMap[rifaId] = { 
+                    Disponible: 0, 
+                    Apartado: 0, 
+                    Pagado: 0,
+                    RecaudadoTotal: 0,
+                    RecaudadoPagado: 0,
+                    RecaudadoApartado: 0
+                };
+            }
+            
+            // Mapeamos dinámicamente según el estado que llegue
+            statsMap[rifaId][estado] = stat.cantidad;
+
+            // Extraemos el dinero (por si viene nulo desde la BD, lo forzamos a 0)
+            const monto = stat.dineroRecaudado || 0;
+
+            // Acumulamos el dinero según el estado
+            statsMap[rifaId].RecaudadoTotal += monto;
+            
+            if (estado === 'Pagado') {
+                statsMap[rifaId].RecaudadoPagado += monto;
+            } else if (estado === 'Apartado') {
+                statsMap[rifaId].RecaudadoApartado += monto;
+            }
+        });
+
+        // 4. Inyectamos la estadística a cada rifa
+        const rifasConStats = rifas.map(rifa => {
+            const rifaId = rifa._id.toString();
+            return {
+                ...rifa,
+                rifid: rifaId,
+                statsTickets: statsMap[rifaId] || { Disponible: 0, Apartado: 0, Pagado: 0, RecaudadoTotal: 0, RecaudadoPagado: 0, RecaudadoApartado: 0 }
+            };
+        });
+
         res.json({
             ok: true,
-            rifas,
+            rifas: rifasConStats,
             total
         });
 
@@ -85,10 +148,7 @@ const getRifa = async(req, res) => {
             ok: false,
             msg: 'Error inesperado, porfavor intente nuevamente'
         });
-
     }
-
-
 };
 
 

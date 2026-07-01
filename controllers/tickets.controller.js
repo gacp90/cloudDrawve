@@ -804,7 +804,7 @@ const updateVendedor = async(req, res = response) => {
         const uid = req.uid;
 
         const user = await User.findById(uid);
-        if (user.role !== 'ADMIN') {
+        if (user.role !== 'ADMIN' || user.role !== 'ADMIN') {
             return res.status(404).json({
                 ok: false,
                 msg: 'Lo siento, no tienes los privilegios necesarios para realizar este cambio.'
@@ -1073,75 +1073,107 @@ const paymentsTicketOnline = async(req, res = response) => {
 const exportTicketsPDF = async (req, res) => {
   try {
     const { rifaId } = req.params;
-    const filtrosFrontend = req.body; // Recibimos los filtros desde Angular
+    const filtrosFrontend = req.body; 
 
+    // Limpiamos paginación
     delete filtrosFrontend.desde;
     delete filtrosFrontend.hasta;
     delete filtrosFrontend.sort;
-    
-
-    // 📌 Buscar rifa
-    const rifa = await Rifa.findById(rifaId);
+        
+    const rifa = await Rifa.findById(rifaId)
+        .populate('admin', 'empresa');
     if (!rifa) {
       return res.status(404).json({ msg: 'Rifa no encontrada' });
     }
     
-    // 📌 Buscar tickets con los filtros aplicados
     const tickets = await Ticket.find(filtrosFrontend).sort({ numero: 1 });
 
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ msg: 'No se encontraron tickets con esos filtros' });
     }
 
-    // 📌 Crear y transmitir el PDF (Streaming)
+    // 📌 1. CÁLCULOS PARA LA "HOJA INFINITA"
+    const colWidth = 36;
+    const rowHeight = 25;
+    const cols = 13;
+    const space = 5;
+
+    // Calculamos cuántas filas se generarán
+    const totalFilas = Math.ceil(tickets.length / cols);
+    const gridHeight = totalFilas * (rowHeight + space);
+    
+    // Reservamos 240px para el encabezado (imagen + título) y le sumamos la grilla y márgenes
+    const pageHeight = 240 + gridHeight + 80;
+
     res.setHeader('Content-disposition', `attachment; filename="tickets-${rifa.name}.pdf"`);
     res.setHeader('Content-type', 'application/pdf');
 
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    doc.pipe(res); // El PDF viaja directamente al cliente
-
+    // 📌 2. CREAMOS EL LIENZO A LA MEDIDA (Ancho de A4: 595.28, Alto: Dinámico)
+    const doc = new PDFDocument({ margin: 40, size: [595.28, pageHeight] });
+    doc.pipe(res);
     doc.font('Helvetica-Bold');
 
-    // ✅ Función para encabezado
-    const drawHeader = () => {
-      doc.fontSize(18).text(rifa.name, { align: 'center' });
-      // Cambiamos el texto para que sea dinámico
-      const subtitulo = filtrosFrontend.estado ? `Tickets: ${filtrosFrontend.estado}` : 'Reporte de Tickets';
-      doc.fontSize(14).text(subtitulo, { underline: true });
-      doc.moveDown(1);
-    };
+    // 📌 3. DIBUJAR ENCABEZADO CON PORTADA VERTICAL
+    let textX = 40;
+    const headerY = 40;
 
-    drawHeader();
+    // Verificar si hay portada y dibujar
+    if (rifa.portada && rifa.portada.img) {
+      const imgPath = path.join(__dirname, `../uploads/portada/${rifa.portada.img}`); 
+      
+      if (fs.existsSync(imgPath)) {
+        try {
+          // 🚀 MAGIA: Convertimos el WebP a un Buffer JPEG en memoria RAM
+          // Usamos .jpeg() porque es más ligero para los PDF que el PNG
+          const imageBuffer = await sharp(imgPath).jpeg().toBuffer();
+          
+          // PDFKit acepta Buffers directamente en lugar de rutas de archivos
+          doc.image(imageBuffer, 40, headerY, { width: 100, height: 177 });
+          textX = 160; // Desplazamos el texto a la derecha
+          
+        } catch (imgError) {
+          console.error('Error convirtiendo imagen WebP para PDFKit:', imgError);
+          // Si por alguna razón falla la conversión, el código sigue vivo, 
+          // simplemente no dibuja la foto y el texto arranca en x=40
+        }
+      }
+    }
 
-    // ... (Todo tu código de la cuadrícula se mantiene exactamente igual) ...
-    // ✅ Configuración de la cuadrícula
-    const colWidth = 46;
-    const rowHeight = 35;
-    const cols = 10;
-    const space = 5;
-    let x = doc.page.margins.left;
-    let y = doc.y;
+    // Título y Subtítulo
+    doc.fontSize(20).fillColor('#2d2d2d').text(rifa.name, textX, headerY + 10);
+    doc.fontSize(12).fillColor('#666666').text(rifa.admin.empresa, textX, headerY + 40);
+    doc.fontSize(10).text(`Total Generados: ${tickets.length}`, textX, headerY + 60);
+
+    // Leyenda de colores
+    doc.roundedRect(textX, headerY + 90, 15, 15, 3).stroke('#2d2d2d');
+    doc.text('Disponible', textX + 22, headerY + 94);
+    
+    doc.roundedRect(textX + 100, headerY + 90, 15, 15, 3).fillAndStroke('#FFF9C4', '#2d2d2d');
+    doc.fillColor('#666666').text('Apartado / Pagado', textX + 122, headerY + 94);
+
+    // 📌 4. DIBUJAR LA CUADRÍCULA MEZCLADA
+    let x = 40; 
+    let y = 240; // Comenzamos a dibujar debajo del encabezado
 
     tickets.forEach((ticket, index) => {
-      if (y + rowHeight + doc.page.margins.bottom > doc.page.height) {
-        doc.addPage();
-        drawHeader();
-        x = doc.page.margins.left;
-        y = doc.y;
+      
+      // ✅ Si NO está disponible, fondo amarillo crema (#FFF9C4), de lo contrario solo borde.
+      if (ticket.estado !== 'Disponible') {
+        doc.roundedRect(x, y, colWidth, rowHeight, 5).fillAndStroke('#FFF9C4', '#2d2d2d');
+      } else {
+        doc.roundedRect(x, y, colWidth, rowHeight, 5).stroke('#2d2d2d');
       }
 
-      doc.roundedRect(x, y, colWidth, rowHeight, 5).stroke('#2d2d2d');
-
+      // Dibujar el número (Forzamos color oscuro para que contraste)
       doc.fillColor('#2d2d2d')
-         .fontSize(18)
-         .text(ticket.numero, x, y + 10, { width: colWidth, align: 'center' });
+         .fontSize( (rifa.numeros > 10000) ? 10 : 14 )
+         .text(ticket.numero, x, y + 6, { width: colWidth, align: 'center' });
 
-      doc.fillColor('black');
-
+      // Matemáticas de la grilla
       x += colWidth + space;
       if ((index + 1) % cols === 0) {
-        x = doc.page.margins.left;
-        y += rowHeight + space;
+        x = 40; // Reseteamos al margen izquierdo
+        y += rowHeight + space; // Bajamos una fila
       }
     });
 

@@ -13,6 +13,20 @@ const ImgSchema = Schema({
 
 });
 
+const ConfigSchema = Schema({
+
+    amountSeleted: {
+        type: Boolean,
+        default: false
+    },
+
+    dateSeleted:{
+        type: Boolean,
+        default: false
+    }
+
+})
+
 const MetodosSchema = Schema({
 
     name: {
@@ -183,6 +197,8 @@ const RifasSchema = Schema({
         default: 0     
     },
 
+    config: ConfigSchema,
+    
     status: {
         type: Boolean,
         default: true
