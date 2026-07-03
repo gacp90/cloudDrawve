@@ -165,6 +165,11 @@ const TicketsSchema = Schema({
         ref: 'User'
     },
 
+    cobrador: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    },
+
     cliente: {
         type: Schema.Types.ObjectId,
         ref: 'Clientes'

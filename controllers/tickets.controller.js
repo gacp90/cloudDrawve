@@ -627,7 +627,7 @@ const updateTicket = async(req, res = response) => {
         // 3. Limpieza de Payload (Evitamos sobrescribir datos de la reserva)
         // Todo lo que se extrae explícitamente aquí, NO se actualizará.
         let { cliente, nombre, codigo, telefono, cedula, direccion, correo, ruta, vendedor, ...campos } = req.body;
-
+        
         if (campos.monto && user.role === 'STAFF') {
             return res.status(403).json({
                 ok: false,
@@ -672,7 +672,7 @@ const updateTicket = async(req, res = response) => {
 =========================================================================*/
 const reserveTickets = async(req, res = response) => {
 
-    const { ticketIds, nombre, telefono, cedula, direccion, ruta, estado, nota, vendedor, monto, cliente, rifa } = req.body;
+    const { ticketIds, nombre, telefono, cedula, direccion, ruta, estado, nota, vendedor, monto, cliente, rifa, cobrador } = req.body;
     const vendedorId = req.uid;
 
     // 1. Validaciones iniciales de entrada
@@ -737,6 +737,7 @@ const reserveTickets = async(req, res = response) => {
                             estado: estado || 'Apartado', 
                             vendedor: vendedorId,
                             cliente: cliente || null,
+                            cobrador: cobrador || null,
                             monto,
                             nombre: nombre,
                             telefono: telefono,
@@ -804,19 +805,31 @@ const updateVendedor = async(req, res = response) => {
         const uid = req.uid;
 
         const user = await User.findById(uid);
-        if (user.role !== 'ADMIN' || user.role !== 'ADMIN') {
+        if (user.role === 'STAFF') {
             return res.status(404).json({
                 ok: false,
                 msg: 'Lo siento, no tienes los privilegios necesarios para realizar este cambio.'
             });
-        }
+        }        
 
         // SEARCH TICKET
-        const ticketDB = await Ticket.findById(tid);
+        const ticketDB = await Ticket.findById(tid)
+            .populate('rifa');
         if (!ticketDB) {
             return res.status(404).json({
                 ok: false,
                 msg: 'No existe ningun ticket con este ID'
+            });
+        }        
+
+        // Evaluamos los permisos
+        const esElDueño = user._id.toString() === ticketDB.rifa.admin.toString();
+        const esEmpleadoDelDueño = user.admin && user.admin.toString() === ticketDB.rifa.admin.toString();
+
+        if (!esElDueño && !esEmpleadoDelDueño) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes privilegios para reservar tickets en esta rifa.'
             });
         }
 
@@ -1148,7 +1161,7 @@ const exportTicketsPDF = async (req, res) => {
     doc.roundedRect(textX, headerY + 90, 15, 15, 3).stroke('#2d2d2d');
     doc.text('Disponible', textX + 22, headerY + 94);
     
-    doc.roundedRect(textX + 100, headerY + 90, 15, 15, 3).fillAndStroke('#FFF9C4', '#2d2d2d');
+    doc.roundedRect(textX + 100, headerY + 90, 15, 15, 3).fillAndStroke('#fdfa56', '#2d2d2d');
     doc.fillColor('#666666').text('Apartado / Pagado', textX + 122, headerY + 94);
 
     // 📌 4. DIBUJAR LA CUADRÍCULA MEZCLADA
@@ -1159,7 +1172,7 @@ const exportTicketsPDF = async (req, res) => {
       
       // ✅ Si NO está disponible, fondo amarillo crema (#FFF9C4), de lo contrario solo borde.
       if (ticket.estado !== 'Disponible') {
-        doc.roundedRect(x, y, colWidth, rowHeight, 5).fillAndStroke('#FFF9C4', '#2d2d2d');
+        doc.roundedRect(x, y, colWidth, rowHeight, 5).fillAndStroke('#fdfa56', '#2d2d2d');
       } else {
         doc.roundedRect(x, y, colWidth, rowHeight, 5).stroke('#2d2d2d');
       }
