@@ -1198,6 +1198,79 @@ const exportTicketsPDF = async (req, res) => {
   }
 };
 
+/** =====================================================================
+ *  SICRONIZAR PAGOS
+=========================================================================*/
+const sincronizarTotalPagadoMasivo = async (req, res) => {
+    try {
+        // 1. Buscamos TODOS los tickets que estén Apartados o Pagados
+        // Puedes agregar { rifa: req.params.rifaId } si quieres hacerlo rifa por rifa
+        const tickets = await Ticket.find({
+            estado: { $in: ['Apartado', 'Pagado'] }
+        });
+
+        if (!tickets || tickets.length === 0) {
+            return res.json({
+                ok: true,
+                msg: 'No se encontraron tickets Apartados o Pagados para sincronizar.'
+            });
+        }
+
+        // 2. Preparamos un arreglo para las operaciones masivas
+        const bulkOps = [];
+
+        tickets.forEach(ticket => {
+            let sumaPagos = 0;
+
+            // 3. Verificamos si tiene el arreglo de pagos anidados
+            if (ticket.pagos && ticket.pagos.length > 0) {
+                // Sumamos la equivalencia (que son los dólares aportados)
+                sumaPagos = ticket.pagos.reduce((acc, pago) => {
+                    // Opcional: Si manejas pagos rechazados/anulados, exclúyelos aquí
+                    if (pago.estado !== 'Anulado' && pago.estado !== 'Rechazado') {
+                        return acc + (pago.monto || 0);
+                    }
+                    return acc;
+                }, 0);
+            }
+
+            // Redondeamos a 2 decimales para evitar bugs nativos de JS (ej: 19.999999)
+            const totalPagadoCalculado = parseFloat(sumaPagos.toFixed(2));
+
+            // 4. Creamos la instrucción de actualización para este ticket en específico
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: ticket._id },
+                    update: { 
+                        $set: { 
+                            totalPagado: totalPagadoCalculado 
+                        } 
+                    }
+                }
+            });
+        });
+
+        // 5. Ejecutamos TODAS las actualizaciones en una sola transacción a la BD
+        if (bulkOps.length > 0) {
+            await Ticket.bulkWrite(bulkOps);
+        }
+
+        // 6. Respuesta exitosa
+        res.json({
+            ok: true,
+            msg: `Sincronización exitosa. Se actualizaron ${bulkOps.length} tickets.`,
+            procesados: bulkOps.length
+        });
+
+    } catch (error) {
+        console.error('Error en sincronización masiva:', error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error interno, por favor revisa los logs del servidor'
+        });
+    }
+};
+
 // EXPORTS
 module.exports = {
     getTicket,
@@ -1213,5 +1286,6 @@ module.exports = {
     saveTicketsMasives,
     exportTicketsPDF,
     obtenerPagosPendientes,
-    reserveTickets
+    reserveTickets,
+    sincronizarTotalPagadoMasivo
 };
