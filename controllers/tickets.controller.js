@@ -757,7 +757,8 @@ const reserveTickets = async(req, res = response) => {
                     exitosos.push({
                         id: tid,
                         numero: ticketReservado.numero,
-                        estado: ticketReservado.estado
+                        estado: ticketReservado.estado,
+                        fecha: ticketReservado.fecha,
                     });
                 } else {
                     const ticketExiste = await Ticket.findById(tid);
