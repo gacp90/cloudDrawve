@@ -8,13 +8,11 @@ const { Types } = require('mongoose');
  *  GET REPORT PAYMENT CONTABLE
 =========================================================================*/
 const obtenerPagosList = async (req, res = response) => {
-
     try {
-        // Extraemos paginación y filtros dinámicos
         const { 
             desde = 0, 
             hasta = 50, 
-            sort = { fecha: -1 }, // Orden por defecto: los más recientes primero
+            sort = { fecha: -1 }, 
             estado, 
             vendedor,
             method,
@@ -31,30 +29,26 @@ const obtenerPagosList = async (req, res = response) => {
 
         // 1. Filtro base de seguridad
         const query = {
-            admin: req.adminId,
+            admin: new Types.ObjectId(req.adminId),
             status: true
         };
 
         // 2. Filtros Dinámicos
         if (estado) {
-            // Si Angular nos envía un arreglo (Ej: ['Pendiente', 'Confirmado'])
             if (Array.isArray(estado)) {
                 query.estado = { $in: estado };
             } else {
-                // Si Angular nos envía un solo texto (Ej: 'Confirmado')
                 query.estado = estado;
             }
         }
-        if (vendedor) query.vendedor = vendedor;
-        if (ruta) query.ruta = ruta;
-        if (rifa) query.rifa = rifa;
-        if (ticket) query.ticket = ticket;
+        if (vendedor) query.vendedor = new Types.ObjectId(vendedor);
+        if (ruta) query.ruta = new Types.ObjectId(ruta);
+        if (rifa) query.rifa = new Types.ObjectId(rifa);
+        if (ticket) query.ticket = new Types.ObjectId(ticket);
         if (method) query.method = new Types.ObjectId(method);
-
 
         // 3. Filtrado Estricto de Fechas
         if (fechaInicio && fechaFin) {
-            // Se asegura de tomar el rango completo de los días seleccionados
             const start = new Date(fechaInicio);
             start.setUTCHours(0, 0, 0, 0); 
             
@@ -67,25 +61,63 @@ const obtenerPagosList = async (req, res = response) => {
             };
         }
 
-        // 4. Ejecución en paralelo con Populate para traer la data relacional
-        const [pagos, total] = await Promise.all([
+        // 4. Ejecución en paralelo (Búsqueda, Conteo y Totalización)
+        const [pagos, total, statsPagos] = await Promise.all([
             Payment.find(query)
-                .populate('vendedor', 'name email role')     // Trae el nombre del cobrador
-                .populate('cliente', 'nombre telefono')        // Trae los datos del comprador
-                .populate('ticket', 'numero monto estado')     // Trae el número de boleto
-                .populate('method', 'nombre cuenta moneda')           // Trae el nombre del banco/método
+                .populate('vendedor', 'name email role')
+                .populate('cliente', 'nombre telefono')
+                .populate('ticket', 'numero monto estado')
+                .populate('method', 'nombre cuenta moneda')
                 .populate('rifa', 'name')
                 .populate('ruta', 'name')
                 .sort(sort)
                 .skip(Number(desde))
                 .limit(Number(hasta)),
-            Payment.countDocuments(query)
-        ]);
+            Payment.countDocuments(query),
+            // 🔥 NUEVO: Pipeline de Agregación para sumar el dinero
+            Payment.aggregate([
+                { 
+                    // Usamos exactamente el mismo query para que respete los filtros del usuario
+                    $match: query 
+                },
+                {
+                    $group: {
+                        // Agrupamos por el nombre del método denormalizado (ej: "Bancolombia", "Zelle")
+                        _id: { $ifNull: ["$nombre", "Otros"] }, 
+                        totalMonedaLocal: { $sum: "$monto" },
+                        totalUSD: { $sum: "$equivalencia" },
+                        cantidadPagos: { $sum: 1 }
+                    }
+                },
+                {
+                    // Ordenamos para que el método que más dinero movió salga de primero
+                    $sort: { totalUSD: -1 }
+                }
+            ])
+        ]);        
 
+        // 5. Calculamos el Gran Total USD (Sumando los totales de cada moneda devueltos por la BD)
+        let granTotalUSD = 0;
+        let granTotalOperaciones = 0;
+        
+        statsPagos.forEach(stat => {
+            granTotalUSD += stat.totalUSD;
+            granTotalOperaciones += stat.cantidadPagos;
+        });
+
+        // Aseguramos redondeo para evitar decimales extraños
+        granTotalUSD = parseFloat(granTotalUSD.toFixed(2));
+
+        // 6. Respuesta final al Frontend
         res.json({
             ok: true,
             pagos,
-            total
+            total,
+            resumen: {
+                granTotalUSD,
+                granTotalOperaciones,
+                porMetodo: statsPagos // Arreglo con el desglose por banco/moneda
+            }
         });
 
     } catch (error) {
@@ -270,17 +302,26 @@ const createPayments = async(req, res = response) => {
                 { $group: { _id: null, totalPagado: { $sum: '$equivalencia' } } }
             ]);
 
-            const nuevoTotalAbonado = resultadoSuma.length > 0 ? Number(resultadoSuma[0].totalPagado.toFixed(2)) : 0;
+            let nuevoTotalAbonado = resultadoSuma.length > 0 ? Number(resultadoSuma[0].totalPagado.toFixed(2)) : 0;
             const ticketDB = await Ticket.findById(nuevoPago.ticket);
             
             let nuevoEstadoTicket = ticketDB.estado; // 'Apartado' por defecto
             let completado = false;
 
+            let totalViejo = 0;
+            if (ticketDB.pagos && ticketDB.pagos.length > 0) {
+                for (const pago of ticketDB.pagos) {
+                    totalViejo += pago.monto;
+                }
+
+                nuevoTotalAbonado = Number((totalViejo + nuevoTotalAbonado).toFixed(2));
+            }
+
             // 3. Verificamos si completó el pago
             if (nuevoTotalAbonado >= (ticketDB.monto - 0.05)) {
                 nuevoEstadoTicket = 'Pagado';
                 completado = true;
-            }
+            }            
 
             // 4. ACTUALIZACIÓN DEL TICKET (La Caché de Lectura)
             // Guardamos tanto el nuevo estado como el 'totalPagado'
@@ -288,7 +329,7 @@ const createPayments = async(req, res = response) => {
                 ticketDB._id, 
                 { 
                     estado: nuevoEstadoTicket,
-                    totalPagado: nuevoTotalAbonado 
+                    totalPagado: nuevoTotalAbonado
                 }, 
                 { useFindAndModify: false }
             );
