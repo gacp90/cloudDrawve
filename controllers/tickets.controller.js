@@ -924,6 +924,7 @@ const restoreTicket = async(req, res = response ) => {
         ticket.cliente = undefined;
         ticket.correo = undefined; // Limpiamos el correo
         ticket.fecha = undefined;
+        ticket.cobrador = undefined;
 
         // ACTUALIZACIÓN SIMULTÁNEA
         // Guardamos el ticket limpio y sumamos 1 al contador de rezagados en la Rifa
