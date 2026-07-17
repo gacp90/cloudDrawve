@@ -911,6 +911,7 @@ const restoreTicket = async(req, res = response ) => {
         ticket.status = true;
         ticket.pagos = [];
         ticket.img = []; // Limpiamos comprobantes viejos
+        ticket.totalPagado = 0;
 
         // Elimina usando $unset interno de Mongoose
         ticket.cedula = undefined;
