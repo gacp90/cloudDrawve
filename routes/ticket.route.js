@@ -10,7 +10,7 @@ const { validarCampos } = require('../middlewares/validar-campos');
 const { validarJWT } = require('../middlewares/validar-jwt');
 
 // CONTROLLERS
-const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor, saveTicketsMasives, exportTicketsPDF, obtenerPagosPendientes, reserveTickets, sincronizarTotalPagadoMasivo } = require('../controllers/tickets.controller');
+const { getTicket, getTicketId, createTicket, updateTicket, searchTicket, getTicketPaid, paymentsTicketOnline, restoreTicket, ticketGanador, updateVendedor, saveTicketsMasives, exportTicketsPDF, obtenerPagosPendientes, reserveTickets, sincronizarTotalPagadoMasivo, obtenerTicketsParaExportar } = require('../controllers/tickets.controller');
 
 const router = Router();
 
@@ -104,6 +104,11 @@ router.post('/payments/online', paymentsTicketOnline)
  *  POST SINCRONIZE PAYMENT
 =========================================================================*/
 router.post('/payments/sincronizar', validarJWT, sincronizarTotalPagadoMasivo)
+
+/** =====================================================================
+ *  POST SINCRONIZE PAYMENT
+=========================================================================*/
+router.post('/exportar/excel', validarJWT, obtenerTicketsParaExportar)
 
 // EXPORT
 module.exports = router;

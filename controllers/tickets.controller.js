@@ -14,6 +14,7 @@ const Ticket = require('../models/ticket.model');
 const User = require('../models/users.model');
 const Rifa = require('../models/rifas.model');
 const Ruta = require('../models/rutas.model');
+const Payment = require('../models/payments.model');
 
 /** =====================================================================
  *  SEARCH TICKET FOR CLIENT
@@ -903,14 +904,35 @@ const restoreTicket = async(req, res = response ) => {
             });
         }
 
+        // ====================================================================
+        // 🚨 AUDITORÍA FINANCIERA: ACTUALIZACIÓN DE PAGOS GLOBALES
+        // ====================================================================
+        // Actualizamos los pagos en la colección general (Payment) para que los 
+        // reportes financieros sigan cuadrando y no queden pagos fantasmas.
+        await Promise.all([
+            // 1. Los Confirmados pasan a Rezagados (El dinero se queda, pero penalizado)
+            Payment.updateMany(
+                { ticket: ticketId, estado: 'Confirmado' },
+                { $set: { estado: 'Rezagado' } }
+            ),
+            // 2. Los Pendientes pasan a Anulados (El dinero nunca entró)
+            Payment.updateMany(
+                { ticket: ticketId, estado: 'Pendiente' },
+                { $set: { estado: 'Anulado' } }
+            )
+        ]);
+        // ====================================================================
+
         // Restaura el ticket a su estado inicial
         ticket.monto = ticket.rifa.monto;
         ticket.estado = 'Disponible';
         ticket.disponible = true;
         ticket.ganador = false;
         ticket.status = true;
-        ticket.pagos = [];
-        ticket.img = []; // Limpiamos comprobantes viejos
+        
+        // Limpiamos la data financiera anidada para el nuevo cliente
+        ticket.pagos = []; 
+        ticket.img = []; 
         ticket.totalPagado = 0;
 
         // Elimina usando $unset interno de Mongoose
@@ -923,7 +945,7 @@ const restoreTicket = async(req, res = response ) => {
         ticket.telefono = undefined;
         ticket.vendedor = undefined;
         ticket.cliente = undefined;
-        ticket.correo = undefined; // Limpiamos el correo
+        ticket.correo = undefined;
         ticket.fecha = undefined;
         ticket.cobrador = undefined;
 
@@ -934,7 +956,7 @@ const restoreTicket = async(req, res = response ) => {
             Rifa.findByIdAndUpdate(
                 ticket.rifa._id, 
                 { $inc: { rezagados: 1 } },
-                { useFindAndModify: false } // Buena práctica en Mongoose
+                { useFindAndModify: false } 
             )
         ]);
 
@@ -1274,6 +1296,89 @@ const sincronizarTotalPagadoMasivo = async (req, res) => {
     }
 };
 
+/** =====================================================================
+ *  TICKETS PARA EL EXCEL
+=========================================================================*/
+const obtenerTicketsParaExportar = async (req, res) => {
+    try {
+        // Recibimos el query que armaste en Angular
+        const { query } = req.body;
+        const uid = req.uid;
+
+        const [userDB, rifa] = await Promise.all([
+            User.findById(uid),
+            Rifa.findById(query.rifa)
+        ]);
+
+        // ¿Es el dueño directo de la rifa?
+        const esElDueño = uid.toString() === rifa.admin.toString();
+        
+        // ¿Es un Supervisor contratado por el dueño de la rifa?
+        const empleado = userDB.admin && userDB.admin.toString() === rifa.admin.toString();
+
+        if (!esElDueño && !empleado) {
+            return res.status(403).json({
+                ok: false,
+                msg: 'No tienes autorización.'
+            });
+        }
+
+        // 1. Clonamos el query y eliminamos la paginación
+        // En Excel queremos TODOS los registros de ese filtro, no solo los primeros 50
+        const filtros = { ...query };
+        delete filtros.desde;
+        delete filtros.hasta;
+        
+        const sort = filtros.sort || { numero: 1 };
+        delete filtros.sort;
+
+        // 2. Buscamos los tickets respetando los filtros exactos de la vista
+        const tickets = await Ticket.find(filtros)
+            .populate('vendedor', 'name')
+            .populate('ruta', 'name')
+            .sort(sort);
+
+        if (!tickets || tickets.length === 0) {
+            return res.json({ ok: true, tickets: [] });
+        }
+
+        // 3. Extraemos solo los IDs de los tickets encontrados
+        const ticketsIds = tickets.map(t => t._id);
+
+        // 4. Buscamos TODOS los pagos nuevos de esos tickets (En una sola consulta)
+        const pagosNuevos = await Payment.find({
+            ticket: { $in: ticketsIds },
+            estado: { $nin: ['Anulado', 'Rechazado', 'Rezagado'] }
+        });
+
+        // 5. Unificamos la data en memoria (Súper rápido)
+        const ticketsFormateados = tickets.map(t => {
+            // Pasamos el documento de Mongoose a un objeto de Javascript puro
+            const ticketObj = t.toObject(); 
+
+            // Filtramos los pagos viejos anidados
+            const pagosViejos = (ticketObj.pagos || []).filter(p => p.estado !== 'Anulado' && p.estado !== 'Rechazado');
+            
+            // Buscamos los pagos nuevos que le pertenecen a este ticket en específico
+            const pagosNuevosDelTicket = pagosNuevos.filter(p => p.ticket.toString() === ticketObj._id.toString());
+            
+            return {
+                ...ticketObj,
+                historialPagos: [...pagosViejos, ...pagosNuevosDelTicket]
+            };
+        });
+
+        res.json({
+            ok: true,
+            tickets: ticketsFormateados
+        });
+
+    } catch (error) {
+        console.error('Error exportando tickets filtrados:', error);
+        res.status(500).json({ ok: false, msg: 'Error preparando datos de exportación' });
+    }
+};
+
 // EXPORTS
 module.exports = {
     getTicket,
@@ -1290,5 +1395,6 @@ module.exports = {
     exportTicketsPDF,
     obtenerPagosPendientes,
     reserveTickets,
-    sincronizarTotalPagadoMasivo
+    sincronizarTotalPagadoMasivo,
+    obtenerTicketsParaExportar
 };
