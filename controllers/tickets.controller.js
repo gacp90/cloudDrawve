@@ -220,15 +220,9 @@ const getTicketId = async(req, res = response) => {
  *  CALCULATE PAYMENTS
 =========================================================================*/
 const getTicketPaid = async(req, res = response) => {
-
     try {
-
         const uid = req.uid;
         const rifid = req.params.rifa;
-
-        let totalApartado = 0;
-        let totalPagado = 0;
-        let pendientes = [];
 
         // VERIFICAR SI ES UN ADMIN
         const user = await User.findById(uid);
@@ -237,10 +231,9 @@ const getTicketPaid = async(req, res = response) => {
                 ok: false,
                 msg: 'No tienes los privilegios necesarios para realizar esta consulta'
             });
-
         }
 
-        // VERIFICAR SI ES UN ADMIN
+        // VERIFICAR SI ES EL DUEÑO DE LA RIFA
         const rifa = await Rifa.findById(rifid);
         if (uid !== (String)(new ObjectId(rifa.admin))) {
             return res.status(401).json({
@@ -251,66 +244,65 @@ const getTicketPaid = async(req, res = response) => {
 
         const [apartados, pagados] = await Promise.all([
             Ticket.find({ rifa: rifid, estado: 'Apartado' })
-            .populate('pagos.user')
-            .populate('ruta')
-            .populate('vendedor'),
+                .populate('pagos.user')
+                .populate('ruta')
+                .populate('vendedor'),
             Ticket.find({ rifa: rifid, estado: 'Pagado' })
-            .populate('pagos.user')
-            .populate('ruta')
-            .populate('vendedor'),
+                .populate('pagos.user')
+                .populate('ruta')
+                .populate('vendedor')
         ]);
 
-        // CALCULATE TODOS LOS APARTADOS
-        // Asegúrate de reiniciar la lista antes de comenzar
-        // this.pendientes = []; 
+        let totalApartado = 0;
+        let totalPagado = 0;
+        let totalDescuento = 0;
+        let pendientes = [];
 
-        for (const apartado of apartados) {
-            
-            // 1. Creamos una bandera local para ESTE ticket
-            let tienePagoPendiente = false; 
+        const precioBaseRifa = rifa.monto;
 
-            if (apartado.pagos && apartado.pagos.length > 0) {
+        // Función auxiliar para procesar la matemática sin repetir código
+        const procesarTickets = (listaTickets, esPagado) => {
+            for (const ticket of listaTickets) {
                 
-                for (const paid of apartado.pagos) {
-                    
-                    // 2. Seguimos sumando el total global (Tu lógica original)
-                    totalApartado += paid.monto;
-                    
-                    // 3. Si encontramos un pendiente, solo activamos la bandera
-                    if (paid.estado === 'Pendiente') {
-                        tienePagoPendiente = true;
-                    }
+                // 1. Sumar usando el nuevo campo directo (Mucho más rápido)
+                if (esPagado) {
+                    totalPagado += (ticket.totalPagado || 0);
+                } else {
+                    totalApartado += (ticket.totalPagado || 0);
+                }
+
+                // 2. Calcular Descuento (Diferencia entre precio base y precio de venta)
+                if (ticket.monto < precioBaseRifa) {
+                    // Usamos Math.max para evitar números negativos si alguien pagó de más por error
+                    totalDescuento += Math.max(0, precioBaseRifa - ticket.monto);
+                }
+
+                // 3. Buscar si tiene pagos pendientes (en el historial anidado)
+                // Usamos .some() que es nativo y más limpio que un bucle for tradicional
+                const tienePendiente = ticket.pagos?.some(p => p.estado === 'Pendiente');
+                
+                if (tienePendiente) {
+                    pendientes.push(ticket);
                 }
             }
+        };
 
-            // 4. AL FINALIZAR de revisar los pagos de este ticket:
-            // Si la bandera se quedó en TRUE, guardamos el ticket.
-            // Al estar fuera del 'for' interno, es imposible que se guarde duplicado.
-            if (tienePagoPendiente) {
-                pendientes.push(apartado);
+        // Ejecutamos la función para ambas listas
+        procesarTickets(apartados, false);
+        procesarTickets(pagados, true);
+
+        // ====================================================================
+        // Opcional: Si necesitas buscar "Pendientes" en la NUEVA colección de pagos
+        // ====================================================================
+        /*
+        const pagosPendientesNuevos = await Payment.find({ rifa: rifid, estado: 'Pendiente' }).populate('ticket');
+        for (const pago of pagosPendientesNuevos) {
+            // Evitamos duplicados si el ticket ya se agregó por un pago anidado
+            if (!pendientes.some(t => t._id.toString() === pago.ticket._id.toString())) {
+                pendientes.push(pago.ticket);
             }
         }
-
-        // CALCULATE TODOS LOS PAGADOS
-        for (let i = 0; i < pagados.length; i++) {
-            const pagado = pagados[i];
-            let tienePagoPendiente = false; 
-
-            if (pagado.pagos && pagado.pagos.length > 0) {
-
-                for (const paid of pagado.pagos) {
-                    totalPagado += paid.monto;
-                    if (paid.estado === 'Pendiente') {
-                        tienePagoPendiente = true;
-                    }
-                }
-            }
-
-            if (tienePagoPendiente) {
-                pendientes.push(pagado);
-            }
-
-        }
+        */
 
         res.json({
             ok: true,
@@ -318,19 +310,17 @@ const getTicketPaid = async(req, res = response) => {
             pagados,
             pendientes,
             totalApartado,
-            totalPagado
+            totalPagado,
+            totalDescuento
         });
-
-
 
     } catch (error) {
         console.log(error);
         return res.status(500).json({
             ok: false,
-            msg: 'Error inesperado, porfavor intente nuevamente'
+            msg: 'Error inesperado, por favor intente nuevamente'
         });
     }
-
 };
 
 /** =====================================================================
