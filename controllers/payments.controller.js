@@ -490,7 +490,7 @@ const cancelarPago = async (req, res = response) => {
                 { $group: { _id: null, totalPagado: { $sum: '$equivalencia' } } }
             ]);
 
-            const nuevoTotalAbonado = resultadoSuma.length > 0 ? Number(resultadoSuma[0].totalPagado.toFixed(2)) : 0;
+            let nuevoTotalAbonado = resultadoSuma.length > 0 ? Number(resultadoSuma[0].totalPagado.toFixed(2)) : 0;
 
             // 🔥 CORRECCIÓN: Sumamos el total histórico de pagos del ticket para evitar inconsistencias ELIMINAR A FUTURO
             let totalViejo = 0;
