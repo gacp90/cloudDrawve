@@ -476,6 +476,9 @@ const cancelarPago = async (req, res = response) => {
         const ticketDB = await Ticket.findById(pagoDB.ticket);
         
         if (ticketDB) {
+
+            
+
             // Sumamos solo lo que queda vivo (Pendiente y Confirmado)
             const resultadoSuma = await Payment.aggregate([
                 { 
@@ -488,6 +491,15 @@ const cancelarPago = async (req, res = response) => {
             ]);
 
             const nuevoTotalAbonado = resultadoSuma.length > 0 ? Number(resultadoSuma[0].totalPagado.toFixed(2)) : 0;
+
+            // 🔥 CORRECCIÓN: Sumamos el total histórico de pagos del ticket para evitar inconsistencias ELIMINAR A FUTURO
+            let totalViejo = 0;
+            if (ticketDB.pagos && ticketDB.pagos.length > 0) {
+                for (const pago of ticketDB.pagos) {
+                    totalViejo += pago.monto;
+                }
+                nuevoTotalAbonado = Number((totalViejo + nuevoTotalAbonado).toFixed(2));
+            }
 
             // CORRECCIÓN: Actualizamos la caché de lectura del ticket obligatoriamente
             ticketDB.totalPagado = nuevoTotalAbonado;
