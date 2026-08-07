@@ -15,6 +15,8 @@ const User = require('../models/users.model');
 const Rifa = require('../models/rifas.model');
 const Ruta = require('../models/rutas.model');
 const Payment = require('../models/payments.model');
+const Cliente = require('../models/cliente.model');
+const Method = require('../models/method.model');
 
 /** =====================================================================
  *  SEARCH TICKET FOR CLIENT
@@ -968,7 +970,7 @@ const restoreTicket = async(req, res = response ) => {
 /** =====================================================================
  *  PAYMENTS ONLINE
 =========================================================================*/
-const paymentsTicketOnline = async(req, res = response) => {
+/* const paymentsTicketOnline = async(req, res = response) => {
 
     try {
 
@@ -1093,6 +1095,239 @@ const paymentsTicketOnline = async(req, res = response) => {
         });
     }
 
+}; */
+
+const paymentsTicketOnline = async (req, res = response) => {
+
+    try {
+        let datos = JSON.parse(req.body.datos);
+        const { tickets, ...campos } = datos;
+        campos.referencia = campos.referencia ? campos.referencia.trim() : '';
+
+        // =========================================================================
+        // 1. VALIDACIONES BÁSICAS Y DE REFERENCIA
+        // =========================================================================
+        if (!tickets || tickets.length === 0) {
+            return res.status(404).json({ ok: false, msg: 'No has seleccionado ningún ticket.' });
+        }
+        if (!campos.referencia) {
+            return res.status(400).json({ ok: false, msg: 'El número de referencia es obligatorio.' });
+        }
+        if (!req.files || Object.keys(req.files).length === 0 || !req.files.image) {
+            return res.status(400).json({ ok: false, msg: 'No has adjuntado el comprobante de pago.' });
+        }
+
+        // Aislamiento: La referencia es única solo dentro del mismo método de pago y rifa
+        const existePago = await Payment.findOne({ 
+            referencia: campos.referencia, 
+            method: campos.method,
+            rifa: tickets[0].rifa 
+        });
+        
+        if (existePago) {
+            return res.status(400).json({ ok: false, msg: 'Ya existe un pago registrado con esta referencia para este método.' });
+        }
+
+        // =========================================================================
+        // 2. VALIDAR MÉTODO DE PAGO
+        // =========================================================================
+        const metodoDB = await Method.findById(campos.method);
+        
+        if (!metodoDB || !metodoDB.status) {
+            return res.status(400).json({ ok: false, msg: 'El método de pago no es válido o está inactivo.' });
+        }
+        if (metodoDB.admin.toString() !== campos.admin) {
+            return res.status(403).json({ ok: false, msg: 'Método de pago no autorizado.' });
+        }
+
+        // =========================================================================
+        // 3. VALIDACIÓN DE LÍMITES DE LA RIFA (Anti-Colapso DB)
+        // =========================================================================
+        const rifaDB = await Rifa.findById(tickets[0].rifa);
+        
+        if (!rifaDB) return res.status(404).json({ ok: false, msg: 'Rifa no encontrada.' });
+        if (tickets.length > rifaDB.max) {
+            return res.status(400).json({ ok: false, msg: `Máximo permitido: ${rifaDB.max} tickets por compra.` });
+        }
+        if (tickets.length < rifaDB.min) {
+            return res.status(400).json({ ok: false, msg: `Mínimo permitido: ${rifaDB.min} tickets por compra.` });
+        }
+
+        // =========================================================================
+        // 4. PRE-CHEQUEO DE DISPONIBILIDAD (Todo o Nada)
+        // =========================================================================
+        const ticketIds = tickets.map(t => t.tid);
+        const ticketsVerificacion = await Ticket.find({ _id: { $in: ticketIds } });
+        
+        const ocupados = ticketsVerificacion.filter(t => t.estado !== 'Disponible');
+        if (ocupados.length > 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Algunos tickets acaban de ser apartados por otra persona.',
+                rechazados: ocupados
+            });
+        }
+
+        // =========================================================================
+        // 5. CÁLCULO DE PRECIO ESTRICTO (Zero Trust)
+        // =========================================================================
+        let cantidadAComprar = tickets.length;
+        let totalCalculadoPorSistema = 0;
+
+        if (rifaDB.botones && rifaDB.botones.length > 0) {
+            const promos = [...rifaDB.botones].sort((a, b) => b.qty - a.qty);
+            for (const promo of promos) {
+                if (cantidadAComprar >= promo.qty) {
+                    const cuantasVecesAplica = Math.floor(cantidadAComprar / promo.qty);
+                    totalCalculadoPorSistema += cuantasVecesAplica * promo.monto;
+                    cantidadAComprar = cantidadAComprar % promo.qty;
+                }
+            }
+        }
+        
+        totalCalculadoPorSistema += cantidadAComprar * rifaDB.monto;
+        const montoFraccionado = (totalCalculadoPorSistema / tickets.length);
+
+        // =========================================================================
+        // 6. PROCESAMIENTO DE IMAGEN
+        // =========================================================================
+        const file = await sharp(req.files.image.data).metadata();
+        const validExt = ['jpg', 'png', 'jpeg', 'webp', 'bmp', 'svg'];
+        
+        if (!validExt.includes(file.format)) {
+            return res.status(400).json({ ok: false, msg: 'Formato de imagen no permitido.' });
+        }
+
+        const nameFile = `${uuidv4()}.webp`;
+        const path = `./uploads/payments/${nameFile}`;
+        
+        await sharp(req.files.image.data)
+            .webp({ equality: 75, effort: 6 })
+            .toFile(path);
+
+        // =========================================================================
+        // 7. CLIENTE (BUSCAR O CREAR)
+        // =========================================================================
+        let clienteDB = await Cliente.findOne({ admin: campos.admin, cedula: campos.cedula });
+        
+        if (!clienteDB) {
+            clienteDB = new Cliente({
+                nombre: campos.nombre, 
+                codigo: campos.codigo, 
+                telefono: campos.codigo + campos.telefono,
+                cedula: campos.cedula, 
+                direccion: campos.direccion, 
+                correo: campos.correo || 'none',
+                admin: campos.admin, 
+                ruta: campos.ruta || null
+            });
+            await clienteDB.save();
+        }
+
+        // =========================================================================
+        // 8. APARTADO DE TICKETS (OPTIMIZADO CON BULKWRITE Y CANDADO)
+        // =========================================================================
+        
+        // Preparamos el paquete de actualización masiva
+        const operacionesBulk = tickets.map(ticketReq => ({
+            updateOne: {
+                filter: { _id: ticketReq.tid, estado: 'Disponible' }, // Candado de seguridad
+                update: {
+                    $set: {
+                        estado: 'Apartado', 
+                        disponible: false, 
+                        cliente: clienteDB._id,
+                        nombre: campos.nombre, 
+                        codigo: campos.codigo, 
+                        telefono: campos.codigo + campos.telefono,
+                        cedula: campos.cedula, 
+                        direccion: campos.direccion, 
+                        correo: campos.correo || 'none',
+                        vendedor: campos.vendedor || campos.admin,
+                        cobrador: campos.vendedor || campos.admin,
+                        monto: montoFraccionado, 
+                        totalPagado: montoFraccionado,
+                        ruta: campos.ruta || null
+                    }
+                }
+            }
+        }));
+
+        const bulkResult = await Ticket.bulkWrite(operacionesBulk);
+
+        // ROLLBACK LIMPIO: Verificamos si alguien nos ganó algún ticket en el último milisegundo
+        if (bulkResult.modifiedCount !== tickets.length) {
+            
+            // Revertimos solo los tickets que sí logramos apartar (nuestros)
+            await Ticket.updateMany(
+                { _id: { $in: ticketIds }, cliente: clienteDB._id }, 
+                { 
+                    $set: { 
+                        estado: 'Disponible', 
+                        disponible: true, 
+                        monto: rifaDB.monto, // Restaura precio original
+                        ganador: false, 
+                        status: true, 
+                        pagos: [], 
+                        img: [], 
+                        totalPagado: 0 
+                    },
+                    $unset: {
+                        cedula: 1, codigo: 1, direccion: 1, nombre: 1, nota: 1, ruta: 1,
+                        telefono: 1, vendedor: 1, cliente: 1, correo: 1, fecha: 1, cobrador: 1
+                    }
+                }
+            );
+            
+            return res.status(400).json({ 
+                ok: false, 
+                msg: 'Colisión con otro comprador durante el proceso. Por favor, intenta de nuevo.' 
+            });
+        }
+
+        // =========================================================================
+        // 9. CREACIÓN DE PAGOS (OPTIMIZADO CON INSERTMANY)
+        // =========================================================================
+        
+        const pagosParaInsertar = tickets.map((ticketReq, i) => {
+            let referenciaUnica = campos.referencia;
+            if (i > 0) referenciaUnica = `${campos.referencia} - ${i + 1}/${tickets.length}`;
+
+            return {
+                descripcion: campos.descripcion || 'Compra vía Web',
+                referencia: referenciaUnica, 
+                nombre: campos.nombre, 
+                cuenta: metodoDB.cuenta, 
+                tasa: metodoDB.tasa, 
+                monto: montoFraccionado, // Precio real calculado en backend
+                equivalencia: (montoFraccionado * metodoDB.tasa), // Ej: Zelle 1 a 1, o Bs a la tasa del método
+                img: nameFile, 
+                cliente: clienteDB._id, 
+                admin: campos.admin,
+                ticket: ticketReq.tid,
+                vendedor: campos.vendedor || campos.admin,
+                method: metodoDB._id, 
+                rifa: tickets[0].rifa, 
+                estado: 'Pendiente'
+            };
+        });
+
+        await Payment.insertMany(pagosParaInsertar);
+
+        // =========================================================================
+        // 10. RESPUESTA EXITOSA
+        // =========================================================================
+        res.json({ 
+            ok: true, 
+            msg: 'Compra procesada exitosamente',
+            // Devolvemos los tickets que llegaron en el req original para que el front sepa que todo salió bien
+            confirmados: tickets 
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ ok: false, msg: 'Error inesperado al procesar la compra' });
+    }
 };
 
 /** =====================================================================
