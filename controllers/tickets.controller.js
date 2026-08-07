@@ -15,7 +15,7 @@ const User = require('../models/users.model');
 const Rifa = require('../models/rifas.model');
 const Ruta = require('../models/rutas.model');
 const Payment = require('../models/payments.model');
-const Cliente = require('../models/cliente.model');
+const Cliente = require('../models/clientes.model');
 const Method = require('../models/method.model');
 
 /** =====================================================================
