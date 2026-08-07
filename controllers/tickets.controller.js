@@ -1296,7 +1296,7 @@ const paymentsTicketOnline = async (req, res = response) => {
             return {
                 descripcion: campos.descripcion || 'Compra vía Web',
                 referencia: referenciaUnica, 
-                nombre: campos.nombre, 
+                nombre: metodoDB.nombre, 
                 cuenta: metodoDB.cuenta, 
                 tasa: metodoDB.tasa, 
                 monto: (montoFraccionado * metodoDB.tasa), // Precio real calculado en backend
