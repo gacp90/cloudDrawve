@@ -1299,14 +1299,15 @@ const paymentsTicketOnline = async (req, res = response) => {
                 nombre: campos.nombre, 
                 cuenta: metodoDB.cuenta, 
                 tasa: metodoDB.tasa, 
-                monto: montoFraccionado, // Precio real calculado en backend
-                equivalencia: (montoFraccionado * metodoDB.tasa), // Ej: Zelle 1 a 1, o Bs a la tasa del método
+                monto: (montoFraccionado * metodoDB.tasa), // Precio real calculado en backend
+                equivalencia: montoFraccionado, // Ej: Zelle 1 a 1, o Bs a la tasa del método
                 img: nameFile, 
                 cliente: clienteDB._id, 
                 admin: campos.admin,
                 ticket: ticketReq.tid,
                 vendedor: campos.vendedor || campos.admin,
                 method: metodoDB._id, 
+                ruta: campos.ruta || null,
                 rifa: tickets[0].rifa, 
                 estado: 'Pendiente'
             };
