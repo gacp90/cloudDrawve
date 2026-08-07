@@ -4,6 +4,7 @@ const { createTickets, createTicketsAgrupado } = require('../helpers/create-tike
 const Rifa = require('../models/rifas.model');
 const User = require('../models/users.model');
 const Ticket = require('../models/ticket.model');
+const Method = require('../models/method.model');
 
 /** =====================================================================
  *  GET RIFAS
@@ -169,9 +170,12 @@ const getRifaId = async(req, res = response) => {
             });
         }
 
+        const metodos = await Method.find({ admin: rifaDB.admin, status: true }).select('moneda nombre img equivalencia cuenta tasa metid');
+
         res.json({
             ok: true,
-            rifa: rifaDB
+            rifa: rifaDB,
+            metodos
         });
 
 
