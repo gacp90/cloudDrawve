@@ -49,15 +49,9 @@ const obtenerPagosList = async (req, res = response) => {
 
         // 3. Filtrado Estricto de Fechas
         if (fechaInicio && fechaFin) {
-            const start = new Date(fechaInicio);
-            start.setUTCHours(0, 0, 0, 0); 
-            
-            const end = new Date(fechaFin);
-            end.setUTCHours(23, 59, 59, 999); 
-
             query.fecha = {
-                $gte: start,
-                $lte: end
+                $gte: new Date(fechaInicio),
+                $lte: new Date(fechaFin)
             };
         }
 
