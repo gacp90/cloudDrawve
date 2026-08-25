@@ -27,7 +27,7 @@ const generarHtmlTickets = (venta) => {
 
         <div style="text-align: center;">
             <h1 style="color: #f3b111; font-size: 28px; margin-bottom: 10px;">¡TRANSACCIÓN EXITOSA!</h1>
-            <p style="font-size: 18px; color: #ffffff; margin-bottom: 30px;">Hola <strong>${venta.nombre}</strong>, gracias por la compra. Tus boletas, han sido reservadas exitosamente para el sorteo de ${venta.rifa.name}.</p>
+            <p style="font-size: 18px; color: #ffffff; margin-bottom: 30px;">Hola <strong>${venta.nombre}</strong>, gracias por la compra. Tus stickers, han sido reservadas exitosamente para el sorteo de ${venta.rifa.name}.</p>
         </div>
         
         <div style="background-color: #1a1a1a; padding: 30px; border-radius: 15px; text-align: center; border: 1px solid #333; margin-bottom: 30px;">

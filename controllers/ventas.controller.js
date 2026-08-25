@@ -202,6 +202,7 @@ const createVenta = async (req, res = response) => {
                         cedula: campos.cedula,
                         telefono: campos.codigo + campos.telefono,
                         correo: campos.correo,
+                        direccion: campos.direccion,
                         rifa: rifa,
                         vendedor: rifaDB.admin,
                         ruta: '697bf198e4a988edd1af4943',
