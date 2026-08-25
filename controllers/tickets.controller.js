@@ -39,7 +39,13 @@ const searchTicket = async(req, res = response) => {
                 rifa
             })
             .populate('ruta')
-            .populate('vendedor');
+            .populate('vendedor', 'nombre email');
+
+        tickets.map(ticket => {
+            if (ticket.estado === 'Pagado') {
+                ticket.totalPagado = 4500;                
+            }
+        });
 
         res.json({
             ok: true,

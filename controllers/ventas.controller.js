@@ -131,7 +131,7 @@ const verificarVentaWompi = async(req, res = response) => {
             const idsTickets = ventaDB.tickets.map(t => t.ticket);
             await Ticket.updateMany(
                 { _id: { $in: idsTickets } },
-                { $set: { estado: 'Pagado', disponible: false } }
+                { $set: { estado: 'Pagado', disponible: false, totalPagado: 4500 } }
             );
 
             const html = await generarHtmlTickets(ventaDB);
