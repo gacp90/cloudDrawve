@@ -28,7 +28,7 @@ const intentarCrearGuiaV2 = async (carrierName, serviceName, payloadBase, config
         name: carrierName,
         service_name: serviceName
     };
-    const response = await axios.post('https://api.skydropx.com/v2/shipments', payloadFinal, config);
+    const response = await axios.post('https://app.skydropx.com/v2/shipments', payloadFinal, config);
     return response.data;
 };
 
