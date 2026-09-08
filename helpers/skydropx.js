@@ -127,16 +127,21 @@ const generarGuiaSkydropx = async (datosVenta) => {
         // ESTRATEGIA DE REINTENTOS AUTOMÁTICOS
         // ==========================================
         let resultData = null;
+        console.log('=========================================================')
+        console.log('Envio: ',JSON.stringify(payloadBase))
+        console.log('=========================================================')
         try {
             // Intento 1: Servientrega
             resultData = await intentarCrearGuiaV2('servientrega', 'standard_sin_contraentrega', payloadBase, config);
         } catch (errorServientrega) {
-            console.log(`[Skydropx] Servientrega rechazó el envío para ${datosVenta.ciudad}. Intentando Envía...`);
+            console.log(`[Skydropx] Servientrega falló. Motivo:`, JSON.stringify(errorServientrega.response?.data || errorServientrega.message));
+            
             try {
                 // Intento 2: Envía (Fallback)
+                console.log(`[Skydropx] Intentando Envía para ${datosVenta.ciudad}...`);
                 resultData = await intentarCrearGuiaV2('envia', 'paquete_terrestre', payloadBase, config);
             } catch (errorEnvia) {
-                // Si ambas fallan (ej. dimensiones extremas o api caída), se lanza al Catch general
+                console.log(`[Skydropx] Envía falló. Motivo:`, JSON.stringify(errorEnvia.response?.data || errorEnvia.message));
                 throw new Error('Ambas transportadoras rechazaron el envío');
             }
         }
