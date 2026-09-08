@@ -126,23 +126,25 @@ const generarGuiaSkydropx = async (datosVenta) => {
         // ==========================================
         // ESTRATEGIA DE REINTENTOS AUTOMÁTICOS
         // ==========================================
-        let resultData = null;
         console.log('=========================================================')
         console.log('Envio: ',JSON.stringify(payloadBase))
         console.log('=========================================================')
+        let resultData = null;
         try {
             // Intento 1: Servientrega
             resultData = await intentarCrearGuiaV2('servientrega', 'standard_sin_contraentrega', payloadBase, config);
         } catch (errorServientrega) {
-            console.log(`[Skydropx] Servientrega falló. Motivo:`, JSON.stringify(errorServientrega.response?.data || errorServientrega.message));
+            console.log(`[Skydropx] Servientrega falló. Intentando Envía...`);
             
             try {
                 // Intento 2: Envía (Fallback)
-                console.log(`[Skydropx] Intentando Envía para ${datosVenta.ciudad}...`);
                 resultData = await intentarCrearGuiaV2('envia', 'paquete_terrestre', payloadBase, config);
             } catch (errorEnvia) {
-                console.log(`[Skydropx] Envía falló. Motivo:`, JSON.stringify(errorEnvia.response?.data || errorEnvia.message));
-                throw new Error('Ambas transportadoras rechazaron el envío');
+                // CAPTURAMOS EL MOTIVO REAL DE LA API Y LO ENVIAMOS AL ERROR
+                const motivoServientrega = JSON.stringify(errorServientrega.response?.data?.errors || errorServientrega.message);
+                const motivoEnvia = JSON.stringify(errorEnvia.response?.data?.errors || errorEnvia.message);
+                
+                throw new Error(`Servientrega rechazó: ${motivoServientrega} | Envía rechazó: ${motivoEnvia}`);
             }
         }
 
