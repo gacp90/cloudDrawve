@@ -10,18 +10,26 @@ const worker = new Worker('colaEnvios', async (job) => {
     const venta = await Venta.findById(ventaId);
     if (!venta) return;
 
-    // 1. Llamada a Skydropx (la que demora)
-    const urlPDF = await generarGuiaSkydropx(venta);
+    const resultadoEnvio = await generarGuiaSkydropx(venta);
 
-    if (urlPDF) {
-        // 2. Actualizamos la DB con el resultado exitoso
-        venta.guia = urlPDF; // O venta.envio.urlGuia según tu modelo
+    if (resultadoEnvio.exito) {
+        venta.guia = resultadoEnvio.guiaUrl;
+        venta.trackingNumber = resultadoEnvio.tracking;
+        venta.trackingUrl = resultadoEnvio.trackingUrl;
+        venta.carrier = resultadoEnvio.carrier;
         venta.statusEnvio = 'Guía Generada';
         await venta.save();
         console.log(`[Worker] Guía generada exitosamente para: ${ventaId}`);
+
+    } else if (resultadoEnvio.omitido) {
+        // Si fue donación o internacional, lo marcamos como completado para no reintentar
+        venta.statusEnvio = 'No requiere envío físico';
+        await venta.save();
+        console.log(`[Worker] Venta ${ventaId} omitida: ${resultadoEnvio.mensaje}`);
+
     } else {
-        // Si no devuelve URL, lanzamos error para que BullMQ reintente según la config
-        throw new Error('Skydropx no devolvió URL de guía');
+        // Si fue un error real de red o de Skydropx
+        throw new Error(`Skydropx falló: ${resultadoEnvio.error}`);
     }
 }, { connection });
 

@@ -131,6 +131,16 @@ const VentasSchema = Schema({
         default: false
     },
 
+    trackingNumber: {
+        type: String
+    },
+    trackingUrl: {
+        type: String
+    },
+    carrier: {
+        type: String
+    },
+
     status: {
         type: Boolean,
         default: true

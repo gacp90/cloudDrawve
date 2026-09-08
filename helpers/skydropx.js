@@ -1,6 +1,17 @@
 const axios = require('axios');
+const codigosBackend = require('../json/backend-codigos.json'); // Tu diccionario recién generado
 
-// 1. Autenticación Correcta (V1)
+// Normalizador para la ciudad, departamento y país
+const normalizarTexto = (texto) => {
+    if (!texto) return '';
+    return String(texto).normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") 
+        .replace(/[^a-zA-Z0-9\s]/g, "") 
+        .toUpperCase()
+        .trim()
+        .replace(/\s+/g, " ");
+};
+
 const obtenerTokenSkydropx = async () => {
     const response = await axios.post('https://app.skydropx.com/api/v1/oauth/token', {
         grant_type: 'client_credentials',
@@ -10,78 +21,141 @@ const obtenerTokenSkydropx = async () => {
     return response.data.access_token;
 };
 
+// Petición a la V2
+const intentarCrearGuiaV2 = async (carrierName, serviceName, payloadBase, config) => {
+    const payloadFinal = { ...payloadBase };
+    payloadFinal.quotation.carrier = {
+        name: carrierName,
+        service_name: serviceName
+    };
+    const response = await axios.post('https://api.skydropx.com/v2/shipments', payloadFinal, config);
+    return response.data;
+};
+
 const generarGuiaSkydropx = async (datosVenta) => {
     try {
+        // ==========================================
+        // REGLA 1: Excluir Donaciones
+        // ==========================================
+        if (datosVenta.donar === true) {
+            return { exito: false, omitido: true, mensaje: 'Es donación, no requiere envío.' };
+        }
+
+        // ==========================================
+        // REGLA 2: Solo envíos en Colombia
+        // ==========================================
+        const paisCliente = normalizarTexto(datosVenta.pais);
+        if (paisCliente !== 'COLOMBIA') {
+            return { exito: false, omitido: true, mensaje: 'Envío internacional, no aplica Skydropx local.' };
+        }
+
+        // ==========================================
+        // REGLA 3: Cálculo de Volumen (Máximo 10)
+        // ==========================================
+        const qty = datosVenta.item?.qty || 1;
+        const cantidadGuantes = qty > 10 ? 10 : qty; // Tope máximo de seguridad
+        
+        const pesoKgRaw = cantidadGuantes * 0.030;
+        const pesoTotalKg = pesoKgRaw < 1 ? 1 : pesoKgRaw; // Mínimo 1 KG
+        
+        // Base 4cm de alto. Por cada guante extra, sube 1cm el paquete
+        const altoPaquete = 4 + (cantidadGuantes - 1); 
+
+        // ==========================================
+        // REGLA 4: Diccionario de Códigos Postales
+        // ==========================================
+        const deptoNorm = normalizarTexto(datosVenta.departamento);
+        const ciudadNorm = normalizarTexto(datosVenta.ciudad);
+        const llaveBusqueda = `${deptoNorm}-${ciudadNorm}`;
+        
+        // Si no lo encuentra (zona sin cobertura), manda el paquete a la bodega principal de Bogotá por defecto
+        const codigoPostalFinal = codigosBackend[llaveBusqueda] || "110111";
+
+        // ==========================================
+        // GENERACIÓN DEL PAYLOAD
+        // ==========================================
         const token = await obtenerTokenSkydropx();
         const config = { 
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } 
         };
-        
-        const pesoTotalKg = Number((datosVenta.item.qty * 0.030).toFixed(3));
-        
-        // 2. Crear el Shipment para obtener cotizaciones (Rates)
-        const payloadShipment = {
-            "address_from": {
-                "province": "Antioquia",
-                "city": "Sabaneta",
-                "name": "SOMOSPRIME.CO",
-                "zip": "055450", // Skydropx V1 es estricto con los códigos postales
-                "country": "CO",
-                "address1": "CALLE 61B SUR 40-20",
-                "company": "SOMOSPRIME",
-                "phone": "3106963870",
-                "email": "contacto@somosprime.co"
-            },
-            "address_to": {
-                "province": datosVenta.departamento,
-                "city": datosVenta.ciudad,
-                "name": datosVenta.nombre,
-                "zip": "000000", // Idealmente, pide el código postal en el checkout
-                "country": "CO",
-                "address1": datosVenta.direccion,
-                "company": "Cliente",
-                "phone": datosVenta.telefono,
-                "email": datosVenta.correo,
-                "reference": datosVenta.direccion
-            },
-            "parcels": [{
-                "weight": pesoTotalKg < 1 ? 1 : pesoTotalKg,
-                "distance_unit": "CM",
-                "mass_unit": "KG",
-                "length": 30,
-                "height": 4,
-                "width": 20
-            }]
+
+        const payloadBase = {
+            "timeout": 15,
+            "sync_label_creation": true,
+            "quotation": {
+                "printing_format": "thermal",
+                "include_order_detail": false,
+                "declared_amount": datosVenta.monto || 45000,
+                "address_from": {
+                    "address_template_id": "1edee2d2-26b0-46c7-bed3-30c0577d2d90",
+                    "name": "Somosprime Co",
+                    "company": "SOMOSPRIME.CO",
+                    "street1": "CALLE 61B SUR 40-20",
+                    "postal_code": "055450", // Sabaneta
+                    "area_level1": "ANTIOQUIA",
+                    "area_level2": "SABANETA",
+                    "country_code": "CO",
+                    "phone": "3106963870",
+                    "email": "contacto@somosprime.co",
+                    "tax_id_number": "1110054029"
+                },
+                "address_to": {
+                    "country_code": "CO",
+                    "postal_code": codigoPostalFinal,
+                    "area_level1": datosVenta.departamento || "N/A",
+                    "area_level2": datosVenta.ciudad || "N/A",
+                    "name": datosVenta.nombre,
+                    "street1": datosVenta.direccion,
+                    "company": datosVenta.nombre,
+                    "phone": datosVenta.telefono,
+                    "email": datosVenta.correo || "contacto@somosprime.co",
+                    "reference": datosVenta.direccion
+                },
+                "parcels": [{
+                    "weight": pesoTotalKg,
+                    "height": altoPaquete,
+                    "width": 20,
+                    "length": 30,
+                    "package_number": "1",
+                    "package_content": `${cantidadGuantes}x ${datosVenta.item?.name || "Artículos"}`,
+                    "package_type": "4G"
+                }]
+            }
         };
 
-        const shipmentReq = await axios.post('https://app.skydropx.com/api/v1/shipments', payloadShipment, config);
-        
-        // 3. Filtrar las tarifas para encontrar "ENVIA" (como hacían en el Legacy)
-        const rates = shipmentReq.data.included.filter(item => item.type === 'rates');
-        const tarifaEnvia = rates.find(rate => rate.attributes.provider.toUpperCase() === 'ENVIA');
-        
-        // Si no está ENVIA disponible por alguna razón, toma la primera opción (la más barata suele ser la 0)
-        const rateId = tarifaEnvia ? tarifaEnvia.id : rates[0].id;
+        // ==========================================
+        // ESTRATEGIA DE REINTENTOS AUTOMÁTICOS
+        // ==========================================
+        let resultData = null;
+        try {
+            // Intento 1: Servientrega
+            resultData = await intentarCrearGuiaV2('servientrega', 'standard_sin_contraentrega', payloadBase, config);
+        } catch (errorServientrega) {
+            console.log(`[Skydropx] Servientrega rechazó el envío para ${datosVenta.ciudad}. Intentando Envía...`);
+            try {
+                // Intento 2: Envía (Fallback)
+                resultData = await intentarCrearGuiaV2('envia', 'paquete_terrestre', payloadBase, config);
+            } catch (errorEnvia) {
+                // Si ambas fallan (ej. dimensiones extremas o api caída), se lanza al Catch general
+                throw new Error('Ambas transportadoras rechazaron el envío');
+            }
+        }
 
-        // 4. Generar la etiqueta oficial (Label)
-        const labelReq = await axios.post('https://app.skydropx.com/api/v1/labels', {
-            "rate_id": rateId,
-            "label_format": "pdf"
-        }, config);
-
-        if (labelReq.data && labelReq.data.data) {
+        if (resultData && resultData.data && resultData.data[0]) {
+            const envioInfo = resultData.data[0];
             return {
                 exito: true,
-                guiaUrl: labelReq.data.data.attributes.label_url,
-                tracking: labelReq.data.data.attributes.tracking_number
+                guiaUrl: envioInfo.label_url,
+                tracking: envioInfo.master_tracking_number,
+                trackingUrl: envioInfo.packages[0]?.tracking_url_provider || null,
+                carrier: envioInfo.rate?.provider_name || 'Desconocido'
             };
         }
 
-        return { exito: false, error: 'Respuesta vacía al generar guía' };
+        return { exito: false, error: 'Respuesta vacía de Skydropx' };
 
     } catch (error) {
-        // En V1, Skydropx devuelve arreglos de errores detallados en error.response.data.errors
-        console.error('Error Skydropx V1:', error.response?.data?.errors || error.message);
+        console.error('Error Fatal Skydropx V2:', error.response?.data?.errors || error.message);
         return { exito: false, error: error.message };
     }
 };
