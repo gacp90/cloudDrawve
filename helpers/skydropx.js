@@ -59,7 +59,7 @@ const generarGuiaSkydropx = async (datosVenta) => {
         const pesoTotalKg = pesoKgRaw < 1 ? 1 : pesoKgRaw; // Mínimo 1 KG
         
         // Base 4cm de alto. Por cada guante extra, sube 1cm el paquete
-        const altoPaquete = 4 + (cantidadGuantes - 1); 
+        const altoPaquete = 2 + (cantidadGuantes - 1); 
 
         // ==========================================
         // REGLA 4: Diccionario de Códigos Postales
@@ -114,8 +114,8 @@ const generarGuiaSkydropx = async (datosVenta) => {
                 "parcels": [{
                     "weight": pesoTotalKg,
                     "height": altoPaquete,
-                    "width": 20,
-                    "length": 30,
+                    "width": 6,
+                    "length": 15,
                     "package_number": "1",
                     "package_content": `${cantidadGuantes}x ${datosVenta.item?.name || "Artículos"}`,
                     "package_type": "4G"
