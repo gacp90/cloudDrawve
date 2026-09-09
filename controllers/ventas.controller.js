@@ -138,7 +138,7 @@ const verificarVentaWompi = async(req, res = response) => {
             await sendMail(ventaDB.correo, '¡Pago Confirmado!', html, '¡Pago Confirmado!');
 
             // CREAR ENVIO CON SKYDROPX
-            if (ventaDB.pais === 'Colombia' && ventaDB.donar) {
+            if (ventaDB.pais === 'Colombia' && !ventaDB.donar) {
                 await agregarVentaAColaEnvio(id);
                 console.log("Venta enviada a la cola de procesamiento asíncrono.");                          
             }
