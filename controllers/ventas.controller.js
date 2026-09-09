@@ -240,7 +240,7 @@ const createVenta = async (req, res = response) => {
 
         // 2. Crear la Venta
         // Calculamos el monto basado en el precio unitario de la rifa por la cantidad
-        const montoTotal = 45000 * campos.item.qty; 
+        const montoTotal = 3100 * campos.item.qty; 
 
         const ventaNew = new Venta({
             ...campos,
