@@ -64,9 +64,7 @@ const generarGuiaSkydropx = async (datosVenta) => {
         // ==========================================
         // REGLA 4: Diccionario de Códigos Postales
         // ==========================================
-        const deptoNorm = normalizarTexto(datosVenta.departamento);
-        const ciudadNorm = normalizarTexto(datosVenta.ciudad);
-        const llaveBusqueda = `${deptoNorm}-${ciudadNorm}`;
+        const llaveBusqueda = `${datosVenta.departamento.trim()}-${datosVenta.ciudad.trim()}`;
         
         // Si no lo encuentra (zona sin cobertura), manda el paquete a la bodega principal de Bogotá por defecto
         const codigoPostalFinal = codigosBackend[llaveBusqueda] || "110111";
