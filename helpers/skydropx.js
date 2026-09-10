@@ -107,7 +107,7 @@ const generarGuiaSkydropx = async (datosVenta) => {
                     "company": datosVenta.nombre,
                     "phone": datosVenta.telefono,
                     "email": datosVenta.correo || "contacto@somosprime.co",
-                    "reference": datosVenta.direccion
+                    "reference": datosVenta.direccion ? datosVenta.direccion.substring(0, 40) : ""
                 },
                 "parcels": [{
                     "weight": pesoTotalKg,
