@@ -394,14 +394,13 @@ const confirmarPagosLote = async(req, res = response) => {
         // Extraemos solo los IDs que sí se pueden confirmar
         const idsValidos = pagosAPromover.map(pago => pago._id);
 
-        // 2. ACTUALIZACIÓN MASIVA DE ESTADOS
+        // 2. ACTUALIZACIÓN MASIVA DE ESTADOS DE LOS PAGOS
         await Payment.updateMany(
             { _id: { $in: idsValidos } }, 
             { $set: { estado: 'Confirmado' } }
         );
 
         // 3. ACTUALIZACIÓN DE SALDOS EN LOS MÉTODOS DE PAGO
-        // Sumamos la equivalencia (USD) al saldo disponible de cada cuenta bancaria involucrada
         for (const pago of pagosAPromover) {
             await Metodo.findByIdAndUpdate(
                 pago.method,
@@ -410,13 +409,40 @@ const confirmarPagosLote = async(req, res = response) => {
             );
         }
 
-        // Nota: No hace falta tocar Ticket.totalPagado aquí, porque el pago ya existía
-        // en el ticket como 'Pendiente' y ya sumaba para su saldo desde que se creó.
+        // 4. ACTUALIZAR A 'Pagado' SOLO LOS TICKETS QUE TIENEN EL 100% DEL MONTO CUBIERTO
+        // Extraemos los IDs únicos de los tickets asociados a este lote de pagos
+        const ticketsIds = [
+            ...new Set(
+                pagosAPromover
+                    .filter(pago => pago.ticket)
+                    .map(pago => pago.ticket.toString())
+            )
+        ];
+
+        let ticketsPagados = 0;
+
+        if (ticketsIds.length > 0) {
+            const resultadoTickets = await Ticket.updateMany(
+                {
+                    _id: { $in: ticketsIds },
+                    disponible: false,
+                    estado: { $ne: 'Pagado' },
+                    // Solo actualiza si totalPagado es mayor o igual al monto del ticket
+                    $expr: { $gte: ['$totalPagado', '$monto'] }
+                },
+                {
+                    $set: { estado: 'Pagado' }
+                }
+            );
+
+            ticketsPagados = resultadoTickets.modifiedCount ?? resultadoTickets.nModified ?? 0;
+        }
 
         res.json({
             ok: true,
-            msg: `${idsValidos.length} pagos fueron verificados y cargados al saldo de sus respectivas cuentas bancarias.`,
-            modificados: idsValidos.length
+            msg: `${idsValidos.length} pagos fueron verificados y ${ticketsPagados} tickets pasaron a estado Pagado.`,
+            modificados: idsValidos.length,
+            ticketsPagados
         });
 
     } catch (error) {

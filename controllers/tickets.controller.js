@@ -193,14 +193,14 @@ const getTicket = async(req, res) => {
 /** =====================================================================
  *  GET TICKET ID
 =========================================================================*/
-const getTicketId = async(req, res = response) => {
-
+const getTicketId = async (req, res = response) => {
     try {
         const id = req.params.id;
 
         const ticketDB = await Ticket.findById(id)
             .populate('ruta')
             .populate('vendedor');
+
         if (!ticketDB) {
             return res.status(400).json({
                 ok: false,
@@ -208,11 +208,42 @@ const getTicketId = async(req, res = response) => {
             });
         }
 
+        let ticketsCliente = [];
+        let pagosCliente = [];
+
+        if (!ticketDB.disponible) {
+            if (ticketDB.cliente) {
+                const clienteId = ticketDB.cliente._id || ticketDB.cliente;
+
+                // 1. Traemos todos los tickets del cliente en esta rifa
+                ticketsCliente = await Ticket.find({
+                    cliente: clienteId,
+                    rifa: ticketDB.rifa
+                })
+                .populate('ruta')
+                .populate('vendedor');
+
+                // 2. Extraemos todos los IDs y traemos TODOS sus pagos en 1 sola consulta ($in)
+                const ticketsIds = ticketsCliente.map(t => t._id);
+                pagosCliente = await Payment.find({ ticket: { $in: ticketsIds } })
+                    .populate('method')
+                    .sort({ fecha: 1 });
+
+            } else {
+                // Si es un ticket vendido pero no tiene ID de cliente vinculado, traemos solo sus pagos
+                ticketsCliente = [ticketDB];
+                pagosCliente = await Payment.find({ ticket: ticketDB._id })
+                    .populate('method')
+                    .sort({ fecha: 1 });
+            }
+        }
+
         res.json({
             ok: true,
-            ticket: ticketDB
+            ticket: ticketDB,
+            ticketsCliente,
+            pagosCliente
         });
-
 
     } catch (error) {
         console.log(error);
@@ -221,7 +252,6 @@ const getTicketId = async(req, res = response) => {
             msg: 'Error inesperado, porfavor intente nuevamente'
         });
     }
-
 };
 
 /** =====================================================================
